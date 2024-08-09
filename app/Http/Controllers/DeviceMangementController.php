@@ -64,6 +64,7 @@ class DeviceMangementController extends Controller
         try {
             $device = new Device();
             $device->DeviceName = $validatedData['DeviceName'];
+            $device->ExternalDeviceName = $validatedData['DeviceName'];
             $device->IPAddress = $validatedData['IPAddress'];
             $device->DeviceStatusID = $validatedData['DeviceStatusID'];
             $device->save();
@@ -188,5 +189,24 @@ class DeviceMangementController extends Controller
             LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error enabling device: ' . $e->getMessage(), LogTypeEnum::ERROR, auth()->id());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    public function UpdateDeviceName(Request $request)
+    {
+        $request->validate([
+            'external_device_id' => 'required|integer|exists:devices,DeviceID',
+            'external_device_name' => 'required|string|max:255',
+        ]);
+
+        $device = Device::findOrFail($request->external_device_id);
+
+        $orginalName = $device->ExternalDeviceName;
+
+        $device->ExternalDeviceName = $request->external_device_name;
+        $device->save();
+
+        LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Changed device name from ' . $orginalName . ' to ' . $device->ExternalDeviceName, LogTypeEnum::INFO, auth()->id());
+
+        return response()->json(['success' => true]);
     }
 }

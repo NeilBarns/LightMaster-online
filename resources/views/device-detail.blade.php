@@ -29,7 +29,21 @@
         <div class="row">
             <div class="column !pt-0 !pr-0 !pb-0">
                 <div class="flex flex-col justify-center h-full w-full">
-                    <h2 class="ui header">{{ $device->DeviceName }}</h2>
+                    <div class="flex items-center">
+                        <h2 class="ui header" id="deviceNameDisplay">{{ $device->ExternalDeviceName }}</h2>
+                        <button class="ml-2" id="editDeviceNameButton">
+                            <i class="pencil icon"></i>
+                        </button>
+                    </div>
+
+
+                    <!-- Hidden input and save button -->
+                    <div class="ui input flex items-center mt-2 w-1/2 !hidden" id="editDeviceNameSection">
+                        <input type="text" id="deviceNameInput" class="ui small input !mr-2"
+                            value="{{ $device->ExternalDeviceName }}">
+                        <button class="ui small blue button ml-2" id="saveDeviceNameButton">Save</button>
+                    </div>
+
                     <span class="text-sm text-gray-500 mt-2 ml-1">{{ $device->deviceStatus->Status }}</span>
                 </div>
             </div>
@@ -661,8 +675,8 @@
         function fetchChartData(viewType, deviceID) {
             const url =
                 viewType === "daily"
-                    ? `/api/device-usage/daily/${deviceID}`
-                    : `/api/device-usage/monthly/${deviceID}`;
+                    ? `/reports/device/usage/daily/${deviceID}`
+                    : `/reports/device/usage/monthly/${deviceID}`;
 
             fetch(url)
                 .then((response) => response.json())
@@ -791,6 +805,46 @@
             }
         });
 
-        
+        const deviceNameDisplay = document.getElementById('deviceNameDisplay');
+        const editDeviceNameButton = document.getElementById('editDeviceNameButton');
+        const editDeviceNameSection = document.getElementById('editDeviceNameSection');
+        const deviceNameInput = document.getElementById('deviceNameInput');
+        const saveDeviceNameButton = document.getElementById('saveDeviceNameButton');
+
+        editDeviceNameButton.addEventListener('click', function () {
+            deviceNameDisplay.style.display = 'none';
+            editDeviceNameButton.style.display = 'none';
+            editDeviceNameSection.classList.remove('!hidden');
+            deviceNameInput.focus();
+        });
+
+        saveDeviceNameButton.addEventListener('click', function () {
+            const newDeviceName = deviceNameInput.value.trim();
+            if (newDeviceName) {
+                // AJAX request to update the device name in the database
+                fetch('/device/update/name', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}' // Ensure you have this token for Laravel
+                    },
+                    body: JSON.stringify({ external_device_id: '{{ $device->DeviceID }}', external_device_name: newDeviceName })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update the display
+                        deviceNameDisplay.textContent = newDeviceName;
+                        // Hide input and save button, show display
+                        deviceNameDisplay.style.display = 'block';
+                        editDeviceNameButton.style.display = 'inline-block';
+                        editDeviceNameSection.classList.add('!hidden');
+                    } else {
+                        alert('Failed to update the device name.');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        });
     });
 </script>

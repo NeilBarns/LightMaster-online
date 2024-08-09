@@ -15,7 +15,8 @@ return new class extends Migration
     {
         Schema::create('Devices', function (Blueprint $table) {
             $table->bigIncrements('DeviceID');
-            $table->string('DeviceName');
+            $table->string('DeviceName', 50);
+            $table->string('ExternalDeviceName', 50);
             $table->string('Description')->nullable();
             $table->unsignedBigInteger('DeviceStatusID');
             $table->string('IPAddress');
@@ -24,6 +25,7 @@ return new class extends Migration
 
             //Indexes
             $table->index('DeviceName');
+            $table->index('ExternalDeviceName');
         });
     }
 

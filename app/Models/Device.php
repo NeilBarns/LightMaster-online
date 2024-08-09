@@ -17,6 +17,7 @@ class Device extends Model
 
     protected $fillable = [
         'DeviceName',
+        'ExternalDeviceName',
         'Description',
         'DeviceStatusID',
         'IPAddress',

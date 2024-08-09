@@ -40,8 +40,8 @@
                         <li class="">
                             <a href="">Activity Logs</a>
                         </li>
-                        <li class="">
-                            <a href="">Financial Reports</a>
+                        <li class="{{ Request::is('*finance*') ? 'active' : '' }}">
+                            <a href="/reports/finance">Financial Reports</a>
                         </li>
                     </ul>
                 </li>

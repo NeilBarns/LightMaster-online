@@ -41,6 +41,7 @@ Route::delete('/api/device/{id}/delete', [DeviceMangementController::class, 'Del
 Route::get('/api/device/{id}/test', [DeviceMangementController::class, 'DeviceTest'])->name('device.test');
 Route::post('/device/{id}/disable', [DeviceMangementController::class, 'DisableDevice'])->name('device.disable');
 Route::post('/device/{id}/enable', [DeviceMangementController::class, 'EnableDevice'])->name('device.enable');
+Route::post('/device/update/name', [DeviceMangementController::class, 'UpdateDeviceName'])->name('device.update.devicename');
 
 
 //TIME CONTROLLERS
@@ -58,8 +59,6 @@ Route::post('/device-time/extend/{id}', [DeviceTimeController::class, 'ExtendDev
 Route::post('/api/device-time/end', [DeviceTimeController::class, 'EndDeviceTimeAPI'])->name('device-time.api.end');
 Route::post('/device/{id}/free', [DeviceTimeController::class, 'FreeLight'])->name('device.free');
 Route::post('/device/{id}/stopfree', [DeviceTimeController::class, 'StopFreeLight'])->name('device.stop.free');
-
-
 
 
 Route::get('/reports', function () {
@@ -87,8 +86,11 @@ Route::delete('/user/delete/{userId}', [UserController::class, 'DeleteUser'])->n
 Route::post('/user/status/{userId}/{status}', [UserController::class, 'UserStatus'])->name('user.status');
 
 //REPORTS
-Route::get('/api/device-usage/daily/{id}', [ReportsController::class, 'GetDailyUsage']);
-Route::get('/api/device-usage/monthly/{id}', [ReportsController::class, 'GetMonthlyUsage']);
+Route::get('/reports/finance', [ReportsController::class, 'GetFinanceReports'])->name('reports.finance');
+Route::get('/reports/device/usage/daily/{id}', [ReportsController::class, 'GetDailyUsage']);
+Route::get('/reports/device/usage/monthly/{id}', [ReportsController::class, 'GetMonthlyUsage']);
+Route::get('/reports/transactions/filter', [ReportsController::class, 'GetFilteredTransactions'])->name('reports.transactions.filter');
+
 
 //AUTH
 Route::post('/login', [AuthController::class, 'UserLogin'])->name('auth.login');
