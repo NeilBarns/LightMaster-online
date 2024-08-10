@@ -44,11 +44,11 @@ $increments = $device->increments;
 <div class="ui card h-[315px] !w-[300px] !mr-6">
 
     <a id="notification-banner-{{ $device->DeviceID }}"
-        class="ui orange inverted tag label notification-banner">Extended
+        class="ui yellow inverted tag label notification-banner">Extended
         time</a>
     <div class="content !max-h-60">
         <div class="header mb-2">
-            <span class="text-base">{{ $device->DeviceName }}</span>
+            <span class="text-base">{{ $device->ExternalDeviceName }}</span>
             <div class="w-7 h-7 float-right">
                 <form action="{{ route('device.detail', $device->DeviceID) }}" method="get" class="inline">
                     @csrf
@@ -450,7 +450,6 @@ $increments = $device->increments;
         const extendItems = document.querySelectorAll('.dropdown .item');
         extendItems.forEach(item => {
             if (!item.classList.contains('event-attached')) {
-                console.log('Attaching event listener to:', item);
                 item.addEventListener('click', function () {
                     startPolling();
                     const deviceId = this.closest('.dropdown').getAttribute('data-id');

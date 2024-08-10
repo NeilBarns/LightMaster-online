@@ -367,48 +367,51 @@ class DeviceTimeController extends Controller
     {
         $validatedData = $request->validate([
             'device_id' => 'required|integer',
+            'from_testing' => 'required|integer',
         ]);
 
         $officialStartTime = Carbon::now();
 
         $device = Device::findOrFail($validatedData['device_id']);
+        $fromTesting = $validatedData['from_testing'];
 
         try {
 
+            if ($fromTesting == 0) {
+                $transaction = DeviceTimeTransactions::where('DeviceID', $device->DeviceID)
+                    ->where('TransactionType', TimeTransactionTypeEnum::START)
+                    ->where('Active', true)->first();
 
-            $transaction = DeviceTimeTransactions::where('DeviceID', $device->DeviceID)
-                ->where('TransactionType', TimeTransactionTypeEnum::START)
-                ->where('Active', true)->first();
+                if ($transaction) {
 
-            if ($transaction) {
+                    $calculabletransactions = DeviceTimeTransactions::where('DeviceID', $device->DeviceID)
+                        ->where('Active', true)
+                        ->get(['Duration', 'Rate']);
+                    $totalDuration = $calculabletransactions->sum('Duration');
+                    $totalRate = $calculabletransactions->sum('Rate');
 
-                $calculabletransactions = DeviceTimeTransactions::where('DeviceID', $device->DeviceID)
-                    ->where('Active', true)
-                    ->get(['Duration', 'Rate']);
-                $totalDuration = $calculabletransactions->sum('Duration');
-                $totalRate = $calculabletransactions->sum('Rate');
+                    $transaction->update([
+                        'EndTime' => $officialStartTime,
+                        'StoppageType' => StoppageTypeEnum::AUTO
+                    ]);
 
-                $transaction->update([
-                    'EndTime' => $officialStartTime,
-                    'StoppageType' => StoppageTypeEnum::AUTO
-                ]);
+                    $rptTransactions = RptDeviceTimeTransactions::create([
+                        'DeviceTimeTransactionsID' => $transaction->TransactionID,
+                        'DeviceID' => $device->DeviceID,
+                        'TransactionType' => TimeTransactionTypeEnum::END,
+                        'Time' => $officialStartTime,
+                        'StoppageType' => StoppageTypeEnum::AUTO,
+                        'Duration' => $totalDuration,
+                        'Rate' => $totalRate,
+                        'CreatedByUserId' => 999999
+                    ]);
+                }
 
-                $rptTransactions = RptDeviceTimeTransactions::create([
-                    'DeviceTimeTransactionsID' => $transaction->TransactionID,
-                    'DeviceID' => $device->DeviceID,
-                    'TransactionType' => TimeTransactionTypeEnum::END,
-                    'Time' => $officialStartTime,
-                    'StoppageType' => StoppageTypeEnum::AUTO,
-                    'Duration' => $totalDuration,
-                    'Rate' => $totalRate,
-                    'CreatedByUserId' => 999999
-                ]);
+                DeviceTimeTransactions::where('DeviceID', $device->DeviceID)->update(['Active' => false]);
+
+                $device->DeviceStatusID = DeviceStatusEnum::INACTIVE_ID;
+                $device->save();
             }
-
-            DeviceTimeTransactions::where('DeviceID', $device->DeviceID)->update(['Active' => false]);
-
-            $device->DeviceStatusID = DeviceStatusEnum::INACTIVE_ID;
-            $device->save();
 
             return response()->json(['success' => 'Device time ended successfully.']);
         } catch (\Exception $e) {

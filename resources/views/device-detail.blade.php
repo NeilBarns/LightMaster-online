@@ -136,7 +136,8 @@
                         class="ui {{ $device->deviceStatus->Status == App\Enums\DeviceStatusEnum::STARTFREE ? 'red' : 'green' }} small compact labeled icon button float-right !mt-2"
                         {{ ($device->deviceStatus->Status ==
                         App\Enums\DeviceStatusEnum::RUNNING ||
-                        $device->deviceStatus->Status == App\Enums\DeviceStatusEnum::PAUSE) ? 'disabled' : '' }}>
+                        $device->deviceStatus->Status == App\Enums\DeviceStatusEnum::PAUSE ||
+                        $device->deviceStatus->Status == App\Enums\DeviceStatusEnum::PENDING) ? 'disabled' : '' }}>
                         <i class="lightbulb icon"></i>
                         {{ $device->deviceStatus->Status == App\Enums\DeviceStatusEnum::STARTFREE ? 'Stop light' : 'Free
                         light' }}
@@ -458,6 +459,15 @@
 @endsection
 
 <script>
+    function showReasonModal(reason) {
+        const reasonMdl = document.getElementById('reasonContent');
+        if (reasonMdl)
+        {
+            reasonMdl.textContent = reason;
+            $('#reasonModal').modal('show');    
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         const deviceID = {{ $device->DeviceID }}; // Pass the DeviceID to JavaScript
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -497,7 +507,8 @@
 
             // Disable buttons
             var buttons = $('#btnDeploy, #btnDisable, #btnDeleteDevice, #btnFreeLight, #btnTestLight');
-            buttons.prop('disabled', true);
+            // buttons.prop('disabled', true);
+            showLoading();
 
             $.ajax({
                 url: `/api/device/${deviceId}/test`,
@@ -506,21 +517,24 @@
                     if (response.success) {
                         // Use a timer to re-enable buttons after 10 seconds
                         setTimeout(function() {
-                            buttons.prop('disabled', false);
+                            // buttons.prop('disabled', false);
+                            hideLoading();
                         }, 9000); // 10000 milliseconds = 10 seconds
 
                     } else {
                         alert('Failed to test device: ' + response.message);
 
                         // Re-enable buttons immediately if testing fails
-                        buttons.prop('disabled', false);
+                        // buttons.prop('disabled', false);
+                        hideLoading();
                     }
                 },
                 error: function(xhr, status, error) {
                     alert('An error occurred: ' + xhr.responseText);
 
                     // Re-enable buttons immediately on error
-                    buttons.prop('disabled', false);
+                    // buttons.prop('disabled', false);
+                    hideLoading();
                 }
             });
         });
@@ -821,30 +835,45 @@
         saveDeviceNameButton.addEventListener('click', function () {
             const newDeviceName = deviceNameInput.value.trim();
             if (newDeviceName) {
-                // AJAX request to update the device name in the database
-                fetch('/device/update/name', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}' // Ensure you have this token for Laravel
-                    },
-                    body: JSON.stringify({ external_device_id: '{{ $device->DeviceID }}', external_device_name: newDeviceName })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Update the display
-                        deviceNameDisplay.textContent = newDeviceName;
-                        // Hide input and save button, show display
-                        deviceNameDisplay.style.display = 'block';
-                        editDeviceNameButton.style.display = 'inline-block';
-                        editDeviceNameSection.classList.add('!hidden');
-                    } else {
-                        alert('Failed to update the device name.');
-                    }
-                })
-                .catch(error => console.error('Error:', error));
+                showLoading();
+
+                setTimeout(() => {
+                    // AJAX request to update the device name in the database
+                    fetch('/device/update/name', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}' // Ensure you have this token for Laravel
+                        },
+                        body: JSON.stringify({
+                            external_device_id: '{{ $device->DeviceID }}',
+                            external_device_name: newDeviceName
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoading(); // Hide loading after the request completes
+
+                        if (data.success) {
+                            // Update the display
+                            deviceNameDisplay.textContent = newDeviceName;
+                            // Hide input and save button, show display
+                            deviceNameDisplay.style.display = 'block';
+                            editDeviceNameButton.style.display = 'inline-block';
+                            editDeviceNameSection.classList.add('!hidden');
+                        } else {
+                            alert('Failed to update the device name.');
+                        }
+                    })
+                    .catch(error => {
+                        hideLoading(); // Hide loading in case of an error
+                        console.error('Error:', error);
+                    });
+                }, 2000);
+            } else {
+                alert('Please enter a valid device name.');
             }
         });
+
     });
 </script>

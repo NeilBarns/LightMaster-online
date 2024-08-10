@@ -53,7 +53,7 @@
         </div>
     </div>
     @else
-    <div class="ui cards h-full overflow-y-auto">
+    <div class="ui cards h-full overflow-y-auto" id="device-cards-container">
         @foreach ($devices as $device)
         @php
         $remainingTime = 0;
@@ -127,8 +127,58 @@
 
     @endif
 
-
+    <div class="fixed bottom-4 right-4">
+        <button id="signalButton" class="w-16 h-16 bg-green-300 rounded-full shadow-lg flex items-center justify-center"
+            title="Locate device">
+            <img src="{{ asset('imgs/signal.png') }}" alt="Signal" class="w-10 h-10">
+        </button>
+    </div>
 </div>
 
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Event listener for the signal button
+        // document.getElementById('signalButton').addEventListener('click', function() {
+        //     fetch('{{ route('devicemanagement') }}', {
+        //         method: 'GET',
+        //         headers: {
+        //             'X-Requested-With': 'XMLHttpRequest',
+        //             'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        //         }
+        //     })
+        //     .then(response => response.json())
+        //     .then(data => {
+        //         console.log(data); // Process the response data as needed
+        //         // For example, update the devices list dynamically
+        //         updateDevicesTable(data.devices);
+        //     })
+        //     .catch(error => console.error('Error fetching devices:', error));
+        // });
+
+        // function updateDevicesTable(devices) {
+        //     const cardsContainer = document.getElementById('device-cards-container');
+        //     cardsContainer.innerHTML = ''; // Clear existing cards
+
+        //     devices.forEach(device => {
+        //         const cardHTML = `
+        //             <div class="ui card">
+        //                 <div class="content">
+        //                     <div class="header">${device->ExternalDeviceName}</div>
+        //                     <div class="meta">${device->DeviceStatus}</div>
+        //                     <div class="description">
+        //                         <p>Total Time: ${device.totalTime} mins</p>
+        //                         <p>Total Rate: PHP ${device.totalRate}</p>
+        //                         <p>Start Time: ${device.startTime}</p>
+        //                         <p>End Time: ${device.endTime}</p>
+        //                         <p>Remaining Time: ${device.remainingTime} secs</p>
+        //                     </div>
+        //                 </div>
+        //             </div>
+        //         `;
+        //         cardsContainer.innerHTML += cardHTML;
+        //     });
+        // }
+    });
+</script>
 
 @endsection

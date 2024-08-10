@@ -201,6 +201,18 @@
 @endsection
 
 <script>
+    function showReasonModal(reason) {
+        const reasonModal = document.getElementById('reasonModal');
+        const reasonContent = document.getElementById('reasonContent');
+
+        if (reasonModal && reasonContent) {
+            reasonContent.textContent = reason; // Set the reason in the modal
+            $(reasonModal).modal('show'); // Show the modal using Semantic UI's modal function
+        } else {
+            console.error('Modal or reason content element not found');
+        }
+    }
+    
     document.addEventListener('DOMContentLoaded', function() {
 
     const today = new Date().toISOString().split('T')[0]; // Format as 'YYYY-MM-DD'
@@ -325,18 +337,6 @@
         return timeString.trim();
     }
 
-    function showReasonModal(reason) {
-        const reasonModal = document.getElementById('reasonModal');
-        const reasonContent = document.getElementById('reasonContent');
-
-        if (reasonModal && reasonContent) {
-            reasonContent.textContent = reason; // Set the reason in the modal
-            $(reasonModal).modal('show'); // Show the modal using Semantic UI's modal function
-        } else {
-            console.error('Modal or reason content element not found');
-        }
-    }
-
     // Function to format numbers
     function number_format(number, decimals) {
         if (typeof number !== 'number' || isNaN(number)) {
@@ -420,6 +420,13 @@
                     second: 'numeric',
                     hour12: true
                 });
+                
+                if (!transaction.device || transaction.device.ExternalDeviceName == null) {
+                    if (!transaction.device) {
+                        transaction.device = {};
+                    }
+                    transaction.device.ExternalDeviceName = "Missing Device Name";
+                }
 
                 let rowHtml = `<tr><td>${transaction.device.ExternalDeviceName}</td>`;
 

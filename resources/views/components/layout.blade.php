@@ -119,11 +119,6 @@
             });
         }
 
-        function showReasonModal(reason) {
-            document.getElementById('reasonContent').textContent = reason;
-            $('#reasonModal').modal('show');
-        }
-        
         document.addEventListener('DOMContentLoaded', function () {
             const toastData = sessionStorage.getItem('toastMessage');
             if (toastData) {

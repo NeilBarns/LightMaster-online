@@ -14,11 +14,18 @@ use Carbon\Carbon;
 
 class DeviceMangementController extends Controller
 {
-    public function GetDevices()
+    public function GetDevices(Request $request)
     {
         $devices = Device::with(['deviceStatus', 'increments' => function ($query) {
             $query->where('Active', true);
         }])->get();
+
+        // Check if the request expects a JSON response
+        if ($request->expectsJson()) {
+            return response()->json(['devices' => $devices]);
+        }
+
+        // Otherwise, return the view
         return view('devicemanagement', compact('devices'));
     }
 
@@ -61,8 +68,8 @@ class DeviceMangementController extends Controller
             'DeviceStatusID' => 'required|integer',
         ]);
 
+        $device = new Device();
         try {
-            $device = new Device();
             $device->DeviceName = $validatedData['DeviceName'];
             $device->ExternalDeviceName = $validatedData['DeviceName'];
             $device->IPAddress = $validatedData['IPAddress'];
@@ -75,6 +82,32 @@ class DeviceMangementController extends Controller
         } catch (\Exception $e) {
             LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error inserting device: ' . $e, LogTypeEnum::ERROR, auth()->id());
             return response()->json(['success' => false, 'message' => 'Failed to register device.', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function UpdateDeviceDetails(Request $request)
+    {
+        $validatedData = $request->validate([
+            'DeviceID' => 'required|integer',
+            'DeviceName' => 'required|string|max:255',
+            'IPAddress' => 'required|ip',
+            'DeviceStatusID' => 'required|integer',
+        ]);
+
+        $device = Device::with('deviceStatus')->findOrFail($validatedData['DeviceID']);
+        try {
+            $device->DeviceName = $validatedData['DeviceName'];
+            $device->ExternalDeviceName = $validatedData['DeviceName'];
+            $device->DeviceStatusID = DeviceStatusEnum::PENDING_ID;
+            $device->IPAddress = $validatedData['IPAddress'];
+            $device->save();
+
+            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Device info update through AP', LogTypeEnum::INFO, null);
+
+            return response()->json(['success' => true, 'message' => 'Device updated successfully.', 'device_id' => $device->DeviceID], 201);
+        } catch (\Exception $e) {
+            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error updating device: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            return response()->json(['success' => false, 'message' => 'Failed to update device.', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -199,14 +232,34 @@ class DeviceMangementController extends Controller
         ]);
 
         $device = Device::findOrFail($request->external_device_id);
+        $deviceIpAddress = $device->IPAddress;
 
         $orginalName = $device->ExternalDeviceName;
+        $newDeviceName = $request->external_device_name;
 
-        $device->ExternalDeviceName = $request->external_device_name;
-        $device->save();
+        try {
+            $client = new \GuzzleHttp\Client();
+            $response = $client->post("http://{$deviceIpAddress}/api/updateDeviceName", [
+                'body' => $newDeviceName,
+                'headers' => [
+                    'Content-Type' => 'text/plain',
+                ],
+            ]);
 
-        LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Changed device name from ' . $orginalName . ' to ' . $device->ExternalDeviceName, LogTypeEnum::INFO, auth()->id());
+            if ($response->getStatusCode() == 200) {
 
-        return response()->json(['success' => true]);
+
+                $device->ExternalDeviceName = $newDeviceName;
+                $device->save();
+
+                LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Changed device name from ' . $orginalName . ' to ' . $device->ExternalDeviceName, LogTypeEnum::INFO, auth()->id());
+
+                return response()->json(['success' => true, 'message' => 'Device name updated successfully.']);
+            }
+            return response()->json(['success' => false, 'message' => 'Failed to update the device name.'], $response->getStatusCode());
+        } catch (\Exception $e) {
+            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error updating device name: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 }

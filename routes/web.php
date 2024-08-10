@@ -37,6 +37,7 @@ Route::get('/device', [DeviceMangementController::class, 'GetDevices'])->name('d
 Route::get('/device/{id}', [DeviceMangementController::class, 'GetDeviceDetails'])->name('device.detail');
 Route::post('/device/{id}/deploy', [DeviceMangementController::class, 'UpdateDeviceOperationDate'])->name('device.deploy');
 Route::post('/api/device/insert', [DeviceMangementController::class, 'InsertDeviceDetails'])->name('device.insert');
+Route::post('/api/device/update', [DeviceMangementController::class, 'UpdateDeviceDetails'])->name('device.update');
 Route::delete('/api/device/{id}/delete', [DeviceMangementController::class, 'DeleteDevice'])->name('device.delete');
 Route::get('/api/device/{id}/test', [DeviceMangementController::class, 'DeviceTest'])->name('device.test');
 Route::post('/device/{id}/disable', [DeviceMangementController::class, 'DisableDevice'])->name('device.disable');
