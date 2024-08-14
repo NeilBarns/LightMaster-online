@@ -1,3 +1,7 @@
+@php
+use App\Enums\PermissionsEnum;
+@endphp
+
 @extends('components.layout')
 
 @section('page-title')
@@ -31,9 +35,11 @@
                 <div class="flex flex-col justify-center h-full w-full">
                     <div class="flex items-center">
                         <h2 class="ui header" id="deviceNameDisplay">{{ $device->ExternalDeviceName }}</h2>
+                        @can([PermissionsEnum::CAN_EDIT_DEVICE_NAME, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
                         <button class="ml-2" id="editDeviceNameButton">
                             <i class="pencil icon"></i>
                         </button>
+                        @endcan
                     </div>
 
 
@@ -58,6 +64,7 @@
             </div>
             <div class="column">
                 @if($device->deviceStatus->Status == App\Enums\DeviceStatusEnum::PENDING)
+                @can([PermissionsEnum::CAN_DEPLOY_DEVICE, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
                 <form action="{{ route('device.deploy', $device->DeviceID) }}" method="POST" class="!float-right">
                     @csrf
                     <button type="submit" id="btnDeploy"
@@ -67,6 +74,7 @@
                         Deploy
                     </button>
                 </form>
+                @endcan
                 @else
                 @if ($device->deviceStatus->Status == App\Enums\DeviceStatusEnum::DISABLED)
                 <div class="tooltip-container !float-right">
@@ -86,6 +94,7 @@
                 </div>
                 @else
                 <div class="tooltip-container !float-right">
+                    @can([PermissionsEnum::CAN_DISABLE_DEVICE, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
                     <form id="disable-form" action="{{ route('device.disable', $device->DeviceID) }}" method="POST">
                         @csrf
                         <button id="btnDisable" data-id="{{ $device->DeviceID }}"
@@ -107,10 +116,12 @@
                             running or on pause</span>
                         @endif
                     </form>
+                    @endcan
                 </div>
                 @endif
                 @endif
 
+                @can([PermissionsEnum::CAN_DELETE_DEVICE, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
                 <div class="tooltip-container !float-right">
                     <button id="btnDeleteDevice" data-id="{{ $device->DeviceID }}"
                         class="ui red small compact labeled icon button float-right !mt-2" {{
@@ -129,8 +140,10 @@
                         pause</span>
                     @endif
                 </div>
+                @endcan
 
                 @if ($device->deviceStatus->Status != App\Enums\DeviceStatusEnum::DISABLED)
+                @can([PermissionsEnum::CAN_TRIGGER_FREE_LIGHT, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
                 <div class="tooltip-container !float-right">
                     <button id="btnFreeLight" data-id="{{ $device->DeviceID }}"
                         class="ui {{ $device->deviceStatus->Status == App\Enums\DeviceStatusEnum::STARTFREE ? 'red' : 'green' }} small compact labeled icon button float-right !mt-2"
@@ -148,6 +161,7 @@
                         pause</span>
                     @endif
                 </div>
+                @endcan
                 @endif
 
                 @if ($device->deviceStatus->Status != App\Enums\DeviceStatusEnum::DISABLED)
@@ -217,12 +231,16 @@
                                 </div>
                             </div>
                         </div>
+                        @can([PermissionsEnum::CAN_EDIT_DEVICE_BASE_TIME, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
                         <div class="three wide column">
+
                             <div class="field">
                                 <label class="invisible">search</label>
                             </div>
                             <button type="submit" class="ui fluid small blue button">Save</button>
                         </div>
+                        @endcan
+
                     </div>
                     <input type="hidden" name="device_id" value="{{ $device->DeviceID }}">
                 </form>
@@ -252,11 +270,16 @@
                                 <span class="text-gray-500">PHP {{ $deviceTime->Rate }}</span>
                             </div>
                             <div class="flex items-center flex-grow justify-end">
+                                @can([PermissionsEnum::CAN_EDIT_DEVICE_INCREMENTS,
+                                PermissionsEnum::ALL_ACCESS_TO_DEVICE])
                                 <button class="ui icon button !bg-transparent !border-none p-2 edit-increment-button"
                                     data-id="{{ $deviceTime->DeviceTimeID }}" data-time="{{ $deviceTime->Time }}"
                                     data-rate="{{ $deviceTime->Rate }}" title="Edit">
                                     <img src="{{ asset('imgs/edit.png') }}" alt="edit" class="w-5 h-5">
                                 </button>
+                                @endcan
+                                @can([PermissionsEnum::CAN_DISABLE_DEVICE_INCREMENTS,
+                                PermissionsEnum::ALL_ACCESS_TO_DEVICE])
                                 <button id="btnDisableIncrement"
                                     class="ui icon button !bg-transparent !border-none p-2 update-increment-status-button"
                                     data-id="{{ $deviceTime->DeviceTimeID }}"
@@ -272,15 +295,20 @@
                                     @endif
 
                                 </button>
+                                @endcan
+                                @can([PermissionsEnum::CAN_DISABLE_DEVICE_INCREMENTS,
+                                PermissionsEnum::ALL_ACCESS_TO_DEVICE])
                                 <button class="ui icon button !bg-transparent !border-none p-2 delete-increment-button"
                                     data-id="{{ $deviceTime->DeviceTimeID }}" title="Delete">
                                     <img src="{{ asset('imgs/delete.png') }}" alt="delete" class="w-5 h-5">
                                 </button>
+                                @endcan
                             </div>
                         </div>
                     </div>
                     @endforeach
-
+                    @can([PermissionsEnum::CAN_ADD_DEVICE_INCREMENTS,
+                    PermissionsEnum::ALL_ACCESS_TO_DEVICE])
                     <div class="ui card w-1/3 !h-24 m-2 !bg-teal-100">
                         <button id="addIncrementButton" class="ui small w-full h-full">
                             <div class="flex justify-center align-middle">
@@ -289,10 +317,14 @@
                             </div>
                         </button>
                     </div>
+                    @endcan
+
                 </div>
             </div>
         </div>
 
+        @can([PermissionsEnum::CAN_VIEW_DEVICE_SPECIFIC_RATE_USAGE_REPORT,
+        PermissionsEnum::ALL_ACCESS_TO_DEVICE])
         <div class="ui divider"></div>
         <div class="row">
             <div class="column">
@@ -318,7 +350,10 @@
             </div>
 
         </div>
+        @endcan
 
+        @can([PermissionsEnum::CAN_VIEW_DEVICE_SPECIFIC_TIME_TRANSACTION_REPORT,
+        PermissionsEnum::ALL_ACCESS_TO_DEVICE])
         <div class="ui divider"></div>
         <div class="row">
             <div class="column">
@@ -439,6 +474,7 @@
                 </div>
             </div>
         </div>
+        @endcan
 
     </div>
 </div>

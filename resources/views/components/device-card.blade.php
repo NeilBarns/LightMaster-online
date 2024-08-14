@@ -2,6 +2,8 @@
 
 @php
 use App\Enums\DeviceStatusEnum;
+use App\Enums\PermissionsEnum;
+
 
 $statusClass = '';
 $isDisabled = false;
@@ -49,6 +51,7 @@ $increments = $device->increments;
     <div class="content !max-h-60">
         <div class="header mb-2">
             <span class="text-base">{{ $device->ExternalDeviceName }}</span>
+            @can([PermissionsEnum::CAN_VIEW_DEVICE_DETAILS, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
             <div class="w-7 h-7 float-right">
                 <form action="{{ route('device.detail', $device->DeviceID) }}" method="get" class="inline">
                     @csrf
@@ -57,6 +60,7 @@ $increments = $device->increments;
                     </button>
                 </form>
             </div>
+            @endcan
         </div>
 
         <a id="device-status-{{ $device->DeviceID }}" class="ui {{ $statusClass }} ribbon label">
@@ -109,6 +113,7 @@ $increments = $device->increments;
         <div class="ui two column grid">
             <div class="row">
                 <div class="column">
+                    @can([PermissionsEnum::CAN_CONTROL_DEVICE_TIME, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
                     <button class="ui fluid small button start-time-button {{ ($isRunning || $isPaused) ? 'red' : '' }}"
                         data-id="{{ $device->DeviceID }}"
                         data-rate="{{ $baseTime ? convertMinutesToHoursAndMinutes($baseTime->Time) : " 0" }}" {{
@@ -119,8 +124,10 @@ $increments = $device->increments;
                         Start {{ $baseTime ? convertMinutesToHoursAndMinutes($baseTime->Time) : "Time" }}
                         @endif
                     </button>
+                    @endcan
                 </div>
                 <div class="column">
+                    @can([PermissionsEnum::CAN_CONTROL_DEVICE_TIME, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
                     @php
                     $buttonClass = 'ui fluid small button pause-time-button';
                     $buttonText = 'Pause time';
@@ -135,11 +142,13 @@ $increments = $device->increments;
                         ? 'disabled' : '' }}>
                         {{ $buttonText }}
                     </button>
+                    @endcan
                 </div>
             </div>
         </div>
         <div class="one two column stackable grid">
             <div class="column">
+                @can([PermissionsEnum::CAN_CONTROL_DEVICE_TIME, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
                 @if ($increments->count() == 1)
                 <button data-id="{{ $device->DeviceID }}" data-time="{{ $increments->first()->Time }}"
                     data-rate="{{ $increments->first()->Rate }}" class="ui small button extend-time-single-button" {{
@@ -159,6 +168,7 @@ $increments = $device->increments;
                     </div>
                 </div>
                 @endif
+                @endcan
             </div>
         </div>
     </div>
