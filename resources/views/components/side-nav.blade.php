@@ -13,7 +13,7 @@ use App\Enums\PermissionsEnum;
         <div class="uk-width-1-2@s uk-width-2-5@m" style="width: 100% !important">
             <ul class="uk-nav-default" uk-nav>
                 @can(PermissionsEnum::VIEW_DASHBOARD)
-                <li id="dashboard-menu-item" style="display: block"
+                <li id="dashboard-menu-item" style="display: none"
                     class="{{ Request::is('dashboard') ? 'active' : '' }}">
                     <a href="/dashboard">
                         <img src="{{ asset('imgs/dashboard.png') }}" alt="Dashboard">
@@ -33,7 +33,7 @@ use App\Enums\PermissionsEnum;
                 {{-- @can(PermissionsEnum::ALL_ACCESS_TO_REPORTS) --}}
                 <li id="reports-menu-item-parent" style="display: block"
                     class="{{ Request::is('reports') ? 'active' : '' }}">
-                    <a href="/reports">
+                    <a href="#">
                         <img src="{{ asset('imgs/reports.png') }}" alt="Reports">
                         Reports
                     </a>
@@ -49,7 +49,7 @@ use App\Enums\PermissionsEnum;
                 {{-- @endcan --}}
                 {{-- @can(PermissionsEnum::ALL_ACCESS_TO_USERS) --}}
                 <li id="settings-menu-item-parent" style="display: block" class="">
-                    <a href="/settings">
+                    <a href="#">
                         <img src="{{ asset('imgs/setting.png') }}" alt="Settings">
                         User Management
                     </a>

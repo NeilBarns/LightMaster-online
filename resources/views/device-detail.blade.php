@@ -323,6 +323,121 @@ use App\Enums\PermissionsEnum;
             </div>
         </div>
 
+        @can([PermissionsEnum::CAN_EDIT_DEVICE_BASE_TIME, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
+        <div class="ui divider"></div>
+        <div class="row">
+            <div class="column">
+                <h5 class="ui header">Watchdog Configuration</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="column">
+                <div class="ui icon message warning">
+                    <div class="content">
+                        <div class="header">
+                            What is <i>Watchdog</i>?
+                        </div>
+                        <p>This process involves the device performing self-maintenance and periodic checks at regular
+                            time intervals. It ensures the device's proper functioning by continuously monitoring its
+                            status and making necessary adjustments.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="column">
+                <form class="ui form" method="POST">
+                    @csrf
+                    <div class="ui three column stackable grid">
+                        <div class="four wide column">
+                            <div class="field">
+                                <label>Watchdog interval</label>
+                            </div>
+                            <div class="ui fluid small right labeled input">
+                                <input type="number" name="txt_watchdogInterval" id="txt_watchdogInterval"
+                                    value="{{ $device->WatchdogInterval ? $device->WatchdogInterval : 0 }}"
+                                    placeholder="60" required>
+                                <div class="ui basic label">
+                                    minutes
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="three wide column">
+
+                            <div class="field">
+                                <label class="invisible">search</label>
+                            </div>
+                            <button id="saveWatchdogInterval" type="button"
+                                class="ui fluid small blue button">Save</button>
+                        </div>
+
+
+                    </div>
+                    <input type="hidden" name="device_id" value="{{ $device->DeviceID }}">
+                </form>
+            </div>
+        </div>
+        @endcan
+
+
+        @can([PermissionsEnum::CAN_EDIT_DEVICE_BASE_TIME, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
+        <div class="ui divider"></div>
+        <div class="row">
+            <div class="column">
+                <h5 class="ui header">Remaining time reminder notification</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="column">
+                <div class="ui icon message warning">
+                    <div class="content">
+                        <div class="header">
+
+                        </div>
+                        <p>A notification that the customer only has N minutes before the transaction time ends. Set to
+                            0 to if notification is not needed.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="column">
+                <form class="ui form" method="POST">
+                    @csrf
+                    <div class="ui three column stackable grid">
+                        <div class="four wide column">
+                            <div class="field">
+                                <label>Remaining time notification</label>
+                            </div>
+                            <div class="ui fluid small right labeled input">
+                                <input type="number" name="txt_remainingTime" id="txt_remainingTime"
+                                    value="{{ $device->RemainingTimeNotification ? $device->RemainingTimeNotification : 0 }}"
+                                    placeholder="60" required>
+                                <div class="ui basic label">
+                                    minutes
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="three wide column">
+
+                            <div class="field">
+                                <label class="invisible">search</label>
+                            </div>
+                            <button id="saveRemainingTime" type="button"
+                                class="ui fluid small blue button">Save</button>
+                        </div>
+
+
+                    </div>
+                    <input type="hidden" name="device_id" value="{{ $device->DeviceID }}">
+                </form>
+            </div>
+        </div>
+        @endcan
+
         @can([PermissionsEnum::CAN_VIEW_DEVICE_SPECIFIC_RATE_USAGE_REPORT,
         PermissionsEnum::ALL_ACCESS_TO_DEVICE])
         <div class="ui divider"></div>
@@ -384,8 +499,12 @@ use App\Enums\PermissionsEnum;
                             @foreach($rptDeviceTimeTransactions as $transaction)
                             @php
 
+                            if ($transaction->TransactionType == 'End')
+                            {
                             $totalRate += $transaction->Rate;
                             $totalDuration += $transaction->Duration;
+                            }
+
 
                             $creatorName = 'N/A';
 
@@ -669,12 +788,12 @@ use App\Enums\PermissionsEnum;
                         {
                             label: "Rate (PHP)",
                             data: [],
-                            backgroundColor: 'rgba(54, 162, 235)', // Add transparency back
+                            backgroundColor: 'rgb(126, 183, 237)', // Add transparency back
                             borderColor: 'rgba(54, 162, 235, 1)',
                             borderWidth: 1,
                             borderRadius: {
-                                topLeft: 10, // Add border radius to top-left corner
-                                topRight: 10, // Add border radius to top-right corner
+                                topLeft: 5, // Add border radius to top-left corner
+                                topRight: 5, // Add border radius to top-right corner
                             },
                             yAxisID: 'y',
                             order: 2, // Order of bar graph
@@ -683,11 +802,11 @@ use App\Enums\PermissionsEnum;
                             label: "Usage (Minutes)",
                             data: [],
                             type: 'line',
-                            backgroundColor: 'rgba(255, 0, 0)', // Line fill color with transparency
-                            borderColor: 'rgba(0, 0, 0, 1)', // Red line
+                            backgroundColor: 'rgb(66, 66, 71)', // Line fill color with transparency
+                            borderColor: 'rgb(66, 66, 71)', // Red line
                             borderWidth: 2,
                             pointRadius: 4, // Increase node size
-                            pointBackgroundColor: 'rgba(255, 0, 0, 1)', // Red node
+                            pointBackgroundColor: 'rgb(66, 66, 71)', // Red node
                             yAxisID: 'y1',
                             order: 1, // Higher order for line graph to bring it in front
                             tension: 0.4, // Smooth the line
@@ -911,5 +1030,94 @@ use App\Enums\PermissionsEnum;
             }
         });
 
+
+        const saveWatchdogIntervalButton = document.getElementById('saveWatchdogInterval');
+        const txt_watchdogInterval = document.getElementById('txt_watchdogInterval');
+
+        if (saveWatchdogIntervalButton) {
+            saveWatchdogIntervalButton.addEventListener('click', function () {
+                const newDeviceWDInterval = parseInt(txt_watchdogInterval.value, 30);  
+                
+                if (newDeviceWDInterval > 0) {
+                    showLoading();
+
+                    setTimeout(() => {
+                        fetch('/device/update/watchdog', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}' // Ensure you have this token for Laravel
+                            },
+                            body: JSON.stringify({
+                                deviceId: '{{ $device->DeviceID }}',
+                                watchdogInterval: newDeviceWDInterval
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            hideLoading(); // Hide loading after the request completes
+
+                            if (data.success) {
+                                showToast(data.message, 'success');
+                            } else {
+                                showToast(data.message || 'An error occurred.', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            hideLoading(); // Hide loading in case of an error
+                            console.log('Fetch error:', error);
+                            showToast('An error occurred. Please try again.', 'error');
+                        });
+                    }, 2000);
+                } else {
+                    alert('Please enter a valid interval greater than 0.');
+                }
+            });
+        }
+
+
+        const saveRemainingTime = document.getElementById('saveRemainingTime');
+        const txt_remainingTime = document.getElementById('txt_remainingTime');
+
+        if (saveRemainingTime) {
+            saveRemainingTime.addEventListener('click', function () {
+                const newRemainingTime = parseInt(txt_remainingTime.value, 0);  
+                
+                if (newRemainingTime > -1) {
+                    showLoading();
+
+                    setTimeout(() => {
+                        fetch('/device/update/remainingtime', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}' // Ensure you have this token for Laravel
+                            },
+                            body: JSON.stringify({
+                                deviceId: '{{ $device->DeviceID }}',
+                                remainingTime: newRemainingTime
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            hideLoading(); // Hide loading after the request completes
+
+                            if (data.success) {
+                                showToast(data.message, 'success');
+                            } else {
+                                showToast(data.message || 'An error occurred.', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            hideLoading(); // Hide loading in case of an error
+                            console.log('Fetch error:', error);
+                            showToast('An error occurred. Please try again.', 'error');
+                        });
+                    }, 2000);
+                } else {
+                    alert('Please enter a valid interval greater than -1.');
+                }
+            });
+        }
     });
 </script>

@@ -11,6 +11,7 @@ use App\Models\DeviceTimeTransactions;
 use App\Models\RptDeviceTimeTransactions;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class DeviceMangementController extends Controller
 {
@@ -73,6 +74,8 @@ class DeviceMangementController extends Controller
             $device->DeviceName = $validatedData['DeviceName'];
             $device->ExternalDeviceName = $validatedData['DeviceName'];
             $device->IPAddress = $validatedData['IPAddress'];
+            $device->WatchdogInterval = 30;
+            $device->RemainingTimeNotification = 0;
             $device->DeviceStatusID = $validatedData['DeviceStatusID'];
             $device->save();
 
@@ -259,6 +262,70 @@ class DeviceMangementController extends Controller
             return response()->json(['success' => false, 'message' => 'Failed to update the device name.'], $response->getStatusCode());
         } catch (\Exception $e) {
             LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error updating device name: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function UpdateWatchdogInterval(Request $request)
+    {
+        $request->validate([
+            'deviceId' => 'required|integer',
+            'watchdogInterval' => 'required|integer|min:1'
+        ]);
+
+        $device = Device::findOrFail($request->deviceId);
+        $deviceIpAddress = $device->IPAddress;
+        $originalWatchdogInterval = $device->WatchdogInterval;
+        $newWatchdogInterval = $request->watchdogInterval;
+
+        try {
+            $client = new \GuzzleHttp\Client();
+            $response = $client->post("http://{$deviceIpAddress}/api/setWatchdogInterval", [
+                'body' => $newWatchdogInterval,
+                'headers' => [
+                    'Content-Type' => 'text/plain',
+                ],
+            ]);
+
+            Log::info('Sent watchdog interval:', ['interval' => $newWatchdogInterval]);
+
+            if ($response->getStatusCode() == 200) {
+                // Update the interval only if the device update was successful
+                $device->WatchdogInterval = $newWatchdogInterval;
+                $device->save();
+
+                LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Changed device watchdog interval from ' . $originalWatchdogInterval . ' to ' . $newWatchdogInterval, LogTypeEnum::INFO, auth()->id());
+
+                return response()->json(['success' => true, 'message' => 'Device watchdog interval updated successfully.']);
+            }
+            return response()->json(['success' => false, 'message' => 'Failed to update the device watchdog interval.'], $response->getStatusCode());
+        } catch (\Exception $e) {
+            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error updating device watchdog interval: ' . $e->getMessage(), LogTypeEnum::ERROR, auth()->id());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function UpdateRemainingTimeNotification(Request $request)
+    {
+        $request->validate([
+            'deviceId' => 'required|integer',
+            'remainingTime' => 'required|integer|min:1'
+        ]);
+
+        $device = Device::findOrFail($request->deviceId);
+        $originalRemainingTime = $device->RemainingTimeNotification;
+        $newRemainingTime = $request->remainingTime;
+
+        try {
+            // Update the interval only if the device update was successful
+            $device->RemainingTimeNotification = $newRemainingTime;
+            $device->save();
+
+            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Changed device remaining time notification from ' . $originalRemainingTime . ' to ' . $newRemainingTime, LogTypeEnum::INFO, auth()->id());
+
+            return response()->json(['success' => true, 'message' => 'Device remaining time notification updated successfully.']);
+        } catch (\Exception $e) {
+            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error updating device remaining time notification: ' . $e->getMessage(), LogTypeEnum::ERROR, auth()->id());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }

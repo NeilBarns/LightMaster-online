@@ -50,6 +50,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/device/{id}/disable', [DeviceMangementController::class, 'DisableDevice'])->name('device.disable');
     Route::post('/device/{id}/enable', [DeviceMangementController::class, 'EnableDevice'])->name('device.enable');
     Route::post('/device/update/name', [DeviceMangementController::class, 'UpdateDeviceName'])->name('device.update.devicename');
+    Route::post('/device/update/watchdog', [DeviceMangementController::class, 'UpdateWatchdogInterval'])->name('device.update.watchdog');
+    Route::post('/device/update/remainingtime', [DeviceMangementController::class, 'UpdateRemainingTimeNotification'])->name('device.update.remainingtime');
 
     // TIME CONTROLLERS
     Route::post('/device-time/increment', [DeviceTimeController::class, 'InsertDeviceIncrement'])->name('device-time.increment.insert');
@@ -84,8 +86,10 @@ Route::middleware(['auth'])->group(function () {
     // USERS
     Route::get('/manage-users', [UserController::class, 'GetUsers'])->name('manage-users');
     Route::get('/user/{userId}', [UserController::class, 'GetUser'])->name('user');
+    Route::get('/profile/{userId}', [UserController::class, 'GetUserProfile'])->name('profile');
     Route::post('/user/insert', [UserController::class, 'InsertUser'])->name('user.insert');
     Route::post('/user/{userId}/update', [UserController::class, 'UpdateUser'])->name('user.update');
+    Route::post('/profile/{userId}/update', [UserController::class, 'UpdateUserProfile'])->name('profile.update');
     Route::delete('/user/delete/{userId}', [UserController::class, 'DeleteUser'])->name('user.delete');
     Route::post('/user/status/{userId}/{status}', [UserController::class, 'UserStatus'])->name('user.status');
 

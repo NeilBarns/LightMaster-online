@@ -42,7 +42,7 @@ class AuthController extends Controller
                         return $role->permissions;
                     });
 
-                    $intended = 'dashboard'; // Default redirect
+                    $intended = 'device'; // Default redirect
 
                     if ($permissions->contains('PermissionName', 'view_dashboard')) {
                         $intended = 'dashboard';

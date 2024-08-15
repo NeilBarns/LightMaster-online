@@ -20,6 +20,8 @@ return new class extends Migration
             $table->string('Description')->nullable();
             $table->unsignedBigInteger('DeviceStatusID');
             $table->string('IPAddress');
+            $table->unsignedBigInteger('RemainingTimeNotification')->nullable();
+            $table->unsignedBigInteger('WatchdogInterval')->nullable();
             $table->dateTime('OperationDate')->nullable();
             $table->timestamps();
 

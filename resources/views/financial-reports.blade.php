@@ -102,8 +102,10 @@
                             @foreach($rptDeviceTimeTransactions as $transaction)
                             @php
                             // Accumulate total rate and duration
-                            $totalRate += $transaction->Rate;
+                            if ($transaction->TransactionType == 'End'){
                             $totalDuration += $transaction->Duration;
+                            $totalRate += $transaction->Rate;
+                            }
 
                             // Determine the creator name
                             $creatorName = 'N/A';
@@ -168,7 +170,7 @@
                                 <td>{{ $transaction->device->ExternalDeviceName }}</td>
                                 <td>{{ $transaction->TransactionType }}</td>
                                 <td>{{ $transaction->Time->format('F d, Y h:i:s A') }}</td>
-                                <td>{{ $transaction->Duration }}</td>
+                                <td>{{ convertMinutesToHoursAndMinutes($transaction->Duration) }}</td>
                                 <td>{{ number_format($transaction->Rate, 2) }}</td>
                                 <td>{{ $creatorName }}</td>
                             </tr>
@@ -179,6 +181,9 @@
                             <tr class="!font-bold bg-cyan-100 h-20">
                                 <td colspan="3" class="!font-bold">Overall Duration and Rate Total</td>
                                 <td class="!font-bold">{{ convertMinutesToHoursAndMinutes($totalDuration) }}</td>
+
+                                {{-- <td class="!font-bold">{{ $totalDuration }}</td> --}}
+                                {{-- <td class="!font-bold">{{ $totalDuration }}</td> --}}
                                 <td colspan="3" class="!font-bold">PHP {{ number_format($totalRate, 2) }}</td>
                             </tr>
                         </tfoot>
@@ -212,7 +217,7 @@
             console.error('Modal or reason content element not found');
         }
     }
-    
+
     document.addEventListener('DOMContentLoaded', function() {
 
     const today = new Date().toISOString().split('T')[0]; // Format as 'YYYY-MM-DD'
@@ -229,12 +234,12 @@
             ...devicesData.map((device, index) => ({
                 label: device.name + " Rate",
                 data: device.monthlyRates,
-                backgroundColor: `rgba(54, 162, 235)`,
+                backgroundColor: 'rgb(126, 183, 237)', // Add transparency back
                 borderColor: 'rgba(54, 162, 235, 1)',
                 borderWidth: 1,
                 borderRadius: {
-                    topLeft: 5,
-                    topRight: 5,
+                topLeft: 5, // Add border radius to top-left corner
+                topRight: 5, // Add border radius to top-right corner
                 },
                 yAxisID: 'y',
                 order: 2 + index, // Stagger bar order
@@ -243,11 +248,11 @@
                 label: device.name + " Usage",
                 data: device.monthlyUsage,
                 type: 'line',
-                backgroundColor: 'rgba(255, 0, 0, 0.5)', // Line fill color
-                borderColor: 'rgba(0, 0, 0, 1)', // Red line
+                backgroundColor: 'rgb(66, 66, 71)', // Line fill color with transparency
+                borderColor: 'rgb(66, 66, 71)', // Red line
                 borderWidth: 2,
-                pointRadius: 4,
-                pointBackgroundColor: 'rgba(255, 0, 0, 1)',
+                pointRadius: 4, // Increase node size
+                pointBackgroundColor: 'rgb(66, 66, 71)', // Red node
                 yAxisID: 'y1',
                 order: 1, // Ensure line is in front
                 tension: 0.4, // Smooth line
@@ -407,8 +412,12 @@
             tfoot.innerHTML = ''; // Clear existing rows
 
             data.forEach(transaction => {
-                totalRate += parseFloat(transaction.Rate);
-                totalDuration += transaction.Duration;
+                
+
+                if (transaction.TransactionType == 'End'){
+                    totalRate += parseFloat(transaction.Rate);
+                    totalDuration += transaction.Duration;
+                }
 
                 const creatorName = transaction.CreatedByUserId === 999999 ? 'Device' : (transaction.creator ? `${transaction.creator.FirstName} ${transaction.creator.LastName}` : 'N/A');
                 const formattedTime = new Date(transaction.Time).toLocaleDateString('en-US', {

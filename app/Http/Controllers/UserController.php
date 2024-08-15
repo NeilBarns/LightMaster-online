@@ -23,6 +23,13 @@ class UserController extends Controller
         return view('user', compact('user', 'roles'));
     }
 
+    public function GetUserProfile($userId)
+    {
+        $user = $userId == 0 ? new Users() : Users::with('roles')->findOrFail($userId);
+        $roles = Roles::all();
+        return view('profile', compact('user', 'roles'));
+    }
+
     public function InsertUser(Request $request)
     {
         $request->validate([
@@ -75,7 +82,12 @@ class UserController extends Controller
             $user->FirstName = $request->input('first_name');
             $user->LastName = $request->input('last_name');
             $user->UserName = $request->input('user_name');
-            $user->Password = $request->input('password');
+            $newPassword = $request->input('password');
+
+            if ($newPassword != $user->Password) {
+                $user->Password = Hash::make($newPassword);
+            }
+
             $user->save();
 
             $roles = json_decode($request->input('roles'), true);
@@ -87,6 +99,30 @@ class UserController extends Controller
                     'RoleId' => $roleId
                 ]);
             }
+
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error updating user: ' . $e->getMessage()]);
+        }
+    }
+
+    public function UpdateUserProfile(Request $request, $userId)
+    {
+        $request->validate([
+            'user_name_profile' => 'required|string',
+            'password_profile' => 'required|string'
+        ]);
+
+        try {
+            $user = Users::findOrFail($userId);
+            $user->UserName = $request->input('user_name_profile');
+
+            $newPassword = $request->input('password_profile');
+
+            if ($newPassword != $user->Password) {
+                $user->Password = Hash::make($newPassword);
+            }
+            $user->save();
 
             return response()->json(['success' => true]);
         } catch (\Exception $e) {

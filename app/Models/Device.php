@@ -20,6 +20,8 @@ class Device extends Model
         'ExternalDeviceName',
         'Description',
         'DeviceStatusID',
+        'WatchdogInterval',
+        'RemainingTimeNotification',
         'IPAddress',
     ];
 
