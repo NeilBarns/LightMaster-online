@@ -12,7 +12,7 @@ use App\Enums\PermissionsEnum;
     <div class="flex-1 left-nav">
         <div class="uk-width-1-2@s uk-width-2-5@m" style="width: 100% !important">
             <ul class="uk-nav-default" uk-nav>
-                @can(PermissionsEnum::VIEW_DASHBOARD)
+                {{-- @can(PermissionsEnum::VIEW_DASHBOARD)
                 <li id="dashboard-menu-item" style="display: none"
                     class="{{ Request::is('dashboard') ? 'active' : '' }}">
                     <a href="/dashboard">
@@ -20,7 +20,7 @@ use App\Enums\PermissionsEnum;
                         Dashboard
                     </a>
                 </li>
-                @endcan
+                @endcan --}}
                 @can([PermissionsEnum::ALL_ACCESS_TO_DEVICE, PermissionsEnum::CAN_VIEW_DEVICES])
                 <li id="vehicle-management-menu-item-parent" style="display: block"
                     class="{{ Request::is('device*') ? 'active' : '' }}">
@@ -30,7 +30,8 @@ use App\Enums\PermissionsEnum;
                     </a>
                 </li>
                 @endcan
-                {{-- @can(PermissionsEnum::ALL_ACCESS_TO_REPORTS) --}}
+                @can([PermissionsEnum::ALL_ACCESS_TO_REPORTS, PermissionsEnum::CAN_VIEW_ACTIVITY_LOGS_REPORTS,
+                PermissionsEnum::CAN_VIEW_FINANCIAL_REPORTS])
                 <li id="reports-menu-item-parent" style="display: block"
                     class="{{ Request::is('reports') ? 'active' : '' }}">
                     <a href="#">
@@ -38,16 +39,20 @@ use App\Enums\PermissionsEnum;
                         Reports
                     </a>
                     <ul class="uk-nav-sub">
-                        <li class="">
-                            <a href="">Activity Logs</a>
+                        @can([PermissionsEnum::ALL_ACCESS_TO_REPORTS, PermissionsEnum::CAN_VIEW_ACTIVITY_LOGS_REPORTS])
+                        <li class="{{ Request::is('*activity*') ? 'active' : '' }}">
+                            <a href="/activity-logs">Activity Logs</a>
                         </li>
+                        @endcan
+                        @can([PermissionsEnum::ALL_ACCESS_TO_REPORTS, PermissionsEnum::CAN_VIEW_FINANCIAL_REPORTS])
                         <li class="{{ Request::is('*finance*') ? 'active' : '' }}">
                             <a href="/reports/finance">Financial Reports</a>
                         </li>
+                        @endcan
                     </ul>
                 </li>
-                {{-- @endcan --}}
-                {{-- @can(PermissionsEnum::ALL_ACCESS_TO_USERS) --}}
+                @endcan
+                @can([PermissionsEnum::ALL_ACCESS_TO_USERS])
                 <li id="settings-menu-item-parent" style="display: block" class="">
                     <a href="#">
                         <img src="{{ asset('imgs/setting.png') }}" alt="Settings">
@@ -65,7 +70,7 @@ use App\Enums\PermissionsEnum;
                         </li>
                     </ul>
                 </li>
-                {{-- @endcan --}}
+                @endcan
             </ul>
         </div>
     </div>

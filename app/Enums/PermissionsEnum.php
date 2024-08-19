@@ -4,7 +4,6 @@ namespace App\Enums;
 
 class PermissionsEnum
 {
-    const VIEW_DASHBOARD = 'view_dashboard';
     const ALL_ACCESS_TO_DEVICE = 'all_access_to_device';
     const ALL_ACCESS_TO_REPORTS = 'all_access_to_reports';
     const ALL_ACCESS_TO_USERS = 'all_access_to_users';
@@ -23,4 +22,8 @@ class PermissionsEnum
     const CAN_VIEW_DEVICE_SPECIFIC_TIME_TRANSACTION_REPORT = 'can_view_device_specific_time_transaction_report';
     const CAN_DEPLOY_DEVICE = 'can_deploy_device';
     const CAN_EDIT_DEVICE_NAME = 'can_edit_device_name';
+    const CAN_EDIT_WATCHDOG_INTERVAL = 'can_edit_watchdog_interval';
+    const CAN_EDIT_REMAINING_TIME_INTERVAL = 'can_edit_remaining_time_interval';
+    const CAN_VIEW_FINANCIAL_REPORTS = 'can_view_financial_reports';
+    const CAN_VIEW_ACTIVITY_LOGS_REPORTS = 'can_view_activity_logs_reports';
 };

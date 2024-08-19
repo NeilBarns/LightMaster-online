@@ -323,7 +323,7 @@ use App\Enums\PermissionsEnum;
             </div>
         </div>
 
-        @can([PermissionsEnum::CAN_EDIT_DEVICE_BASE_TIME, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
+        @can([PermissionsEnum::CAN_EDIT_WATCHDOG_INTERVAL, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
         <div class="ui divider"></div>
         <div class="row">
             <div class="column">
@@ -381,7 +381,7 @@ use App\Enums\PermissionsEnum;
         @endcan
 
 
-        @can([PermissionsEnum::CAN_EDIT_DEVICE_BASE_TIME, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
+        @can([PermissionsEnum::CAN_EDIT_REMAINING_TIME_INTERVAL, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
         <div class="ui divider"></div>
         <div class="row">
             <div class="column">
@@ -535,12 +535,24 @@ use App\Enums\PermissionsEnum;
                                 <td>{{ convertMinutesToHoursAndMinutes($transaction->Duration) }}</td>
                                 <td colspan="2">PHP {{ number_format($transaction->Rate, 2) }}</td>
                             </tr>
-                            @elseif ($transaction->TransactionType == 'Pause')
+                            @elseif ($transaction->TransactionType == 'Pause' && $transaction->Reason == null)
                             <tr>
                                 <td>{{ $transaction->TransactionType }}</td>
                                 <td>{{ $transaction->Time->format('F d, Y h:i:s A') }}</td>
                                 <td colspan="2" class="font-bold">Remaining time: {{
                                     convertSecondsToTimeFormat($transaction->Duration) }}</td>
+                                <td>{{ $creatorName }}</td>
+                            </tr>
+                            @elseif ($transaction->TransactionType == 'Pause' && $transaction->Reason != null)
+                            <tr>
+                                <td>{{ $transaction->TransactionType }}</td>
+                                <td>{{ $transaction->Time->format('F d, Y h:i:s A') }}</td>
+                                <td colspan="2">
+                                    <a href="javascript:void(0);"
+                                        onclick="showReasonModal('{{ $transaction->Reason }} with remaining time {{ convertSecondsToTimeFormat($transaction->Duration) }}')">
+                                        Show reason
+                                    </a>
+                                </td>
                                 <td>{{ $creatorName }}</td>
                             </tr>
                             @elseif ($transaction->TransactionType == 'Start Free')

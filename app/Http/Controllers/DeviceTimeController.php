@@ -420,6 +420,77 @@ class DeviceTimeController extends Controller
         }
     }
 
+    public function PauseDeviceTimeAPI(Request $request)
+    {
+        $validatedData = $request->validate([
+            'device_id' => 'required|integer',
+            'remaining_time' => 'required|integer',
+        ]);
+
+        $deviceId = $request->input('device_id');
+        $remainingTime = $request->input('remaining_time');
+        $officialPauseTime = Carbon::now();
+
+        try {
+            // Find the device
+            $device = Device::findOrFail($deviceId);
+
+            // Retrieve active transactions for the device, excluding PAUSE transactions
+            $activeTransactions = DeviceTimeTransactions::where('DeviceID', $deviceId)
+                ->where('Active', true)
+                ->whereNotIn('TransactionType', [TimeTransactionTypeEnum::PAUSE, TimeTransactionTypeEnum::RESUME])
+                ->orderBy('TransactionID', 'desc')
+                ->get();
+
+            // Calculate total time and rate
+            $totalTime = $activeTransactions->sum('Duration');
+            $totalRate = $activeTransactions->sum('Rate');
+
+            // Calculate the start time of the pause by subtracting the remaining time from the current time
+            $pauseStartTime = $officialPauseTime->copy()->subSeconds($remainingTime);
+
+            // Start the PAUSE transaction
+            $transaction = DeviceTimeTransactions::create([
+                'DeviceID' => $device->DeviceID,
+                'TransactionType' => TimeTransactionTypeEnum::PAUSE,
+                'StartTime' => $pauseStartTime,
+                'Duration' => $remainingTime,
+                'Rate' => 0,
+                'Active' => true,
+                'Reason' => 'Power interrupted',
+                'CreatedByUserId' => 999999  // or system user if no auth context
+            ]);
+
+            // Update the device status to PAUSED
+            $device->DeviceStatusID = DeviceStatusEnum::PAUSE_ID;
+            $device->save();
+
+            // Log this pause in the report transactions
+            RptDeviceTimeTransactions::create([
+                'DeviceTimeTransactionsID' => $transaction->TransactionID,
+                'DeviceID' => $device->DeviceID,
+                'TransactionType' => TimeTransactionTypeEnum::PAUSE,
+                'Time' => $officialPauseTime,
+                'Duration' => $remainingTime,
+                'Rate' => 0,
+                'Reason' => 'Power interrupted',
+                'CreatedByUserId' => 999999
+            ]);
+
+            // Return a response with the calculated start time and remaining time
+            return response()->json([
+                'success' => 'Device paused successfully.',
+                'pause_start_time' => $pauseStartTime->toDateTimeString(),
+                'remaining_time' => $remainingTime,
+                'total_rate' => $totalRate,
+            ]);
+        } catch (\Exception $e) {
+            // Log any errors
+            LoggingController::InsertLog(LogEntityEnum::DEVICE, $deviceId, 'Error pausing device: ' . $e->getMessage(), LogTypeEnum::ERROR, auth()->id());
+            return response()->json(['error' => 'Error pausing device: ' . $e->getMessage()], 500);
+        }
+    }
+
     public function PauseDeviceTime(Request $request, $id)
     {
         $device = Device::findOrFail($id);

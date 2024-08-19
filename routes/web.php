@@ -4,10 +4,13 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DeviceManagementController;
 use App\Http\Controllers\DeviceMangementController;
 use App\Http\Controllers\DeviceTimeController;
+use App\Http\Controllers\LoggingController;
 use App\Http\Controllers\LongPollingController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -36,6 +39,7 @@ Route::post('/api/device/update', [DeviceMangementController::class, 'UpdateDevi
 Route::delete('/api/device/{id}/delete', [DeviceMangementController::class, 'DeleteDevice'])->name('device.delete');
 Route::get('/api/device/{id}/test', [DeviceMangementController::class, 'DeviceTest'])->name('device.test');
 Route::post('/api/device-time/end', [DeviceTimeController::class, 'EndDeviceTimeAPI'])->name('device-time.api.end');
+Route::post('/api/device-time/pause', [DeviceTimeController::class, 'PauseDeviceTimeAPI'])->name('device-time.api.end');
 
 // Authenticated Routes
 Route::middleware(['auth'])->group(function () {
@@ -98,9 +102,22 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports/device/usage/daily/{id}', [ReportsController::class, 'GetDailyUsage']);
     Route::get('/reports/device/usage/monthly/{id}', [ReportsController::class, 'GetMonthlyUsage']);
     Route::get('/reports/transactions/filter', [ReportsController::class, 'GetFilteredTransactions'])->name('reports.transactions.filter');
+    Route::get('/activity-logs', [LoggingController::class, 'GetActivityLogs'])->name('activity.logs');
+
+
+
 
     // LONG POLLING
     Route::get('/active-transactions', [LongPollingController::class, 'GetActiveTransactions']);
+    Route::get('/check-session', function () {
+        $sessionLifetime = Config::get('session.lifetime'); // Lifetime in minutes
+        $sessionActive = auth()->check(); // Check if the user is logged in
+
+        return response()->json([
+            'session_active' => $sessionActive,
+            'session_lifetime' => $sessionLifetime
+        ]);
+    });
 });
 
 // AUTH

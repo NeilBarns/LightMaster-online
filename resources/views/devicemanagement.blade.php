@@ -6,7 +6,7 @@
 @endsection
 
 @section('content')
-<div class="flex flex-col h-full px-5 py-7">
+<div class="flex flex-col h-full px-5 py-7" id="device-management-page">
     <form class="ui form">
         @csrf
         <div class="ui three column stackable grid">
@@ -128,36 +128,12 @@
     @endif
 
     <div class="fixed bottom-4 right-4">
-        <button id="signalButton" class="w-16 h-16 bg-green-300 rounded-full shadow-lg flex items-center justify-center"
+        <button id="signalButton" onclick="location.reload();"
+            class="w-16 h-16 bg-green-300 rounded-full shadow-lg flex items-center justify-center"
             title="Locate device">
             <img src="{{ asset('imgs/signal.png') }}" alt="Signal" class="w-10 h-10">
         </button>
     </div>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-
-        const refreshBtn = document.getElementById("signalButton");
-
-        setInterval(function() {
-            showLoading();
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-        }, 5000);
-        
-        if (refreshBtn)
-        {
-            refreshBtn.addEventListener('click', function(event) {
-                showLoading();
-
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            });
-        }
-    });
-</script>
 
 @endsection

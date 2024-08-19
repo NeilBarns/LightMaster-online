@@ -23,4 +23,12 @@ class LoggingController extends Controller
         $logs = ActivityLog::orderBy('created_at', 'desc')->get();
         return view('logs.index', compact('logs'));
     }
+
+    public function GetActivityLogs()
+    {
+        // Fetch activity logs with related user data
+        $logs = ActivityLog::with('user')->get();
+
+        return view('activity-logs', compact('logs'));
+    }
 }

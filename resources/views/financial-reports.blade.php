@@ -128,13 +128,26 @@
                                 <td>{{ convertMinutesToHoursAndMinutes($transaction->Duration) }}</td>
                                 <td colspan="3">PHP {{ number_format($transaction->Rate, 2) }}</td>
                             </tr>
-                            @elseif ($transaction->TransactionType == 'Pause')
+                            @elseif ($transaction->TransactionType == 'Pause' && $transaction->Reason == null)
                             <tr>
                                 <td>{{ $transaction->device->ExternalDeviceName }}</td>
                                 <td>{{ $transaction->TransactionType }}</td>
                                 <td>{{ $transaction->Time->format('F d, Y h:i:s A') }}</td>
                                 <td colspan="2" class="font-bold">Remaining time: {{
                                     convertSecondsToTimeFormat($transaction->Duration) }}</td>
+                                <td>{{ $creatorName }}</td>
+                            </tr>
+                            @elseif ($transaction->TransactionType == 'Pause' && $transaction->Reason != null)
+                            <tr>
+                                <td>{{ $transaction->device->ExternalDeviceName }}</td>
+                                <td>{{ $transaction->TransactionType }}</td>
+                                <td>{{ $transaction->Time->format('F d, Y h:i:s A') }}</td>
+                                <td colspan="2">
+                                    <a href="javascript:void(0);"
+                                        onclick="showReasonModal('{{ $transaction->Reason }} with remaining time {{ convertSecondsToTimeFormat($transaction->Duration) }}')">
+                                        Show reason
+                                    </a>
+                                </td>
                                 <td>{{ $creatorName }}</td>
                             </tr>
                             @elseif ($transaction->TransactionType == 'Start Free')
@@ -181,9 +194,6 @@
                             <tr class="!font-bold bg-cyan-100 h-20">
                                 <td colspan="3" class="!font-bold">Overall Duration and Rate Total</td>
                                 <td class="!font-bold">{{ convertMinutesToHoursAndMinutes($totalDuration) }}</td>
-
-                                {{-- <td class="!font-bold">{{ $totalDuration }}</td> --}}
-                                {{-- <td class="!font-bold">{{ $totalDuration }}</td> --}}
                                 <td colspan="3" class="!font-bold">PHP {{ number_format($totalRate, 2) }}</td>
                             </tr>
                         </tfoot>
@@ -451,14 +461,24 @@
                         <td>${convertMinutesToHoursAndMinutes(transaction.Duration)}</td>
                         <td colspan="3">PHP ${validateAndFormatNumber(transaction.Rate, 2)}</td>
                     </tr>`;
-                } else if (transaction.TransactionType === 'Pause') {
+                } else if (transaction.TransactionType === 'Pause' && transaction.Reason === null) {
                     rowHtml += `
                         <td>${transaction.TransactionType}</td>
                         <td>${formattedTime}</td>
                         <td colspan="2" class="font-bold">Remaining time: ${convertSecondsToTimeFormat(transaction.Duration)}</td>
                         <td>${creatorName}</td>
                     </tr>`;
-                } else if (transaction.TransactionType === 'Start Free') {
+                } else if (transaction.TransactionType === 'Pause' && transaction.Reason !== null) {
+                    rowHtml += `
+                        <td>${transaction.TransactionType}</td>
+                        <td>${formattedTime}</td>
+                        <td colspan="2">
+                            <a href="javascript:void(0);" onclick="showReasonModal('${transaction.Reason} with remaining time ${convertSecondsToTimeFormat(transaction.Duration)}')">Show reason</a>
+                        </td>
+                        <td>${creatorName}</td>
+                    </tr>`;
+                }  
+                else if (transaction.TransactionType === 'Start Free') {
                     rowHtml += `
                         <td>${transaction.TransactionType}</td>
                         <td>${formattedTime}</td>

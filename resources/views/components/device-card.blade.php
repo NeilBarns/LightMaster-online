@@ -300,7 +300,7 @@ $increments = $device->increments;
                 })
                 .then(data => {
                     if (data.success) {
-                        startPolling();
+                        fetchActiveTransactions();
                         hideLoading();
                         showNotification(deviceId, 'Extended time');
                         updateUI(deviceId, new Date(data.startTime), new Date(data.endTime), data.totalTime, data.totalRate);
@@ -348,7 +348,7 @@ $increments = $device->increments;
                 hideLoading();
                 if (data.success) {
                     if (action === 'start') {
-                        startPolling();
+                        fetchActiveTransactions();
                         this.textContent = 'End time';
                         this.classList.add('red');
                         const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
@@ -411,7 +411,7 @@ $increments = $device->increments;
                 hideLoading();
                 if (data.success) {
                     if (action === 'pause') {
-                        startPolling();
+                        fetchActiveTransactions();
                         this.textContent = 'Resume';
                         this.classList.add('green');
                         const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
@@ -429,7 +429,7 @@ $increments = $device->increments;
                         updateStatusRibbon(deviceId, 'Paused: ' + convertSecondsToTimeFormat(data.remaining_time));
                     }
                     else {
-                        startPolling();
+                        fetchActiveTransactions();
                         this.textContent = 'Pause time';
                         this.classList.remove('green');
                         const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
@@ -461,7 +461,7 @@ $increments = $device->increments;
         extendItems.forEach(item => {
             if (!item.classList.contains('event-attached')) {
                 item.addEventListener('click', function () {
-                    startPolling();
+                    
                     const deviceId = this.closest('.dropdown').getAttribute('data-id');
                     const increment = this.getAttribute('data-value');
                     const rate = this.getAttribute('data-rate');
@@ -487,6 +487,7 @@ $increments = $device->increments;
                     })
                     .then(data => {
                         if (data.success) {
+                            fetchActiveTransactions();
                             hideLoading();
                             showNotification(deviceId, 'Extended time');
                             updateUI(deviceId, new Date(data.startTime), new Date(data.endTime), data.totalTime, data.totalRate);
@@ -521,6 +522,7 @@ $increments = $device->increments;
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    fetchActiveTransactions();
                     $(`#endTimeModal-${deviceId}`).modal('hide');
                     const startButton = document.querySelector(`.start-time-button[data-id="${deviceId}"]`);
                     const baseRate = startButton.getAttribute('data-rate');

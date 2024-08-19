@@ -10,120 +10,106 @@
     <link rel="icon" type="image/x-icon" href="{{ asset('imgs/lightmaster-icon.png') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- JQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{{ asset('js/jquery.min.js') }}"></script>
 
     <!-- Fonts -->
     <link href="https://fonts.bunny.net/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 
+    {{--
+    <link href="/css/app.css" rel="stylesheet"> --}}
+
     <!-- UIkit CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uikit@3.20.8/dist/css/uikit.min.css" />
+    <link rel="stylesheet" href="{{ asset('css/uikit.min.css') }}" />
 
     <!-- UIkit JS -->
-    <script defer src="https://cdn.jsdelivr.net/npm/uikit@3.20.8/dist/js/uikit.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/uikit@3.20.8/dist/js/uikit-icons.min.js"></script>
+    <script defer src="{{ asset('js/uikit.min.js') }}"></script>
+    <script defer src="{{ asset('js/uikit-icons.min.js') }}"></script>
 
     <!-- AG Grid -->
-    <script defer src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    {{-- <script defer src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script> --}}
+    <link rel="stylesheet" href="{{ asset('css/ag-grid.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/ag-theme-balham.css') }}">
+    <script src="{{ asset('js/ag-grid-community.min.js') }}"></script>
 
     <!-- Chart.js  -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ asset('js/chart.js') }}"></script>
 
     <!-- Fomantic IU -->
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js">
-    </script>
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.js"></script>
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css">
-
+    <script src="{{ asset('js/jquery.min.js') }}"></script>
+    <link rel="stylesheet" type="text/css" href="{{ asset('css/semantic.min.css') }}">
+    <script src="{{ asset('js/semantic.min.js') }}"></script>
 </head>
 
-<body class="antialiased flex justify-center flex-col items-center">
-    <div class="h-full w-full flex justify-center content-center items-center">
-        <div class="shadow-xl shadow-black rounded-sm p-1.5" style="width: 500px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-        border-radius: 0.375rem;">
-            <div class="flex justify-center items-center px-4" style="height: 50%">
-                {{-- <img style="height: 80%" src="{{ asset('imgs/isabela-state-university-logo.png') }}" alt="logo">
-                --}}
-                <img style="height: 80%" src="{{ asset('imgs/tempimage.png') }}" alt="logo">
+<body class="antialiased flex justify-center items-center min-h-screen bg-gray-100">
+    <div class="w-full max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6"
+        style="box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);">
+        <div class="flex flex-col justify-center items-center mb-8">
+            <img src="{{ asset('imgs/lightmaster-icon.png') }}" alt="LightMaster" class="h-20 mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">LightMaster</h2>
+            <p class="text-gray-600 italic">"Lighting the way, the smart way."</p>
+        </div>
+        <h4 class="ui divider"></h4>
+        <form action="{{ route('auth.login') }}" method="POST" class="ui form">
+            @csrf
+            <div class="field">
+                <label for="username">User Name</label>
+                <input type="text" name="username" id="username" placeholder="Enter your username" required>
             </div>
-            <h4 class="ui divider">
-            </h4>
-            <div style="height: auto; padding: 5%">
-                <form action="{{ route('auth.login') }}" method="POST" class="ui form">
-                    @csrf
-                    <div class="field">
-                        <label>User name</label>
-                        <input type="text" name="username" placeholder="User Name">
-                    </div>
-                    <div class="field">
-                        <label>Password</label>
-                        <input type="password" name="password" placeholder="Password">
-                    </div>
-                    <div class="two fields">
-                        <div class="field">
-                            <div class="ui small checkbox !m-0">
-                                <input name="remember" type="checkbox" tabindex="0" class="hidden">
-                                <label>Remember me</label>
-                            </div>
-                        </div>
-                        <div class="field">
-                            <div class="ui small checkbox !m-0 float-right">
-                                <a id="btnForgotPassword">Forgot password?</a>
-                            </div>
-                        </div>
-                    </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input type="password" name="password" id="password" placeholder="Enter your password" required>
+            </div>
+            <div class="flex flex-col mt-6">
+                @error('failed')
+                <div class="ui negative message">
+                    {{ $message }}
+                </div>
+                @enderror
+                <button type="submit" class="ui fluid primary button">
+                    Login
+                </button>
+            </div>
+        </form>
+    </div>
 
-                    <div class="flex flex-col">
-                        @error('failed')
-                        <div class="ui negative message">
-                            {{ $message }}
-                        </div>
-                        @enderror
-                        <button class="ui small button" type="submit">Login</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <div id="forgotPasswordModal" class="modal-prime" style="display: none">
-        <div class="modal-content">
-            <span id="btnCloseFPModal" class="close">&times;</span>
-            <h4 class="ui horizontal left aligned divider header !mb-11">
-                Password reset
-            </h4>
-            {{-- action="{{ route('verify.email') }}" --}}
-            <form method="POST" class="ui form">
-                @csrf
-                <div class="ui form">
-                    <div class="!fields">
-                        <div class="fluid required field">
-                            <label>Email address</label>
-                            <input id="fpEmail" type="text" name="email" placeholder="">
-                            @error('email')
-                            <div class="ui pointing red basic label">
-                                {{-- {{ $message }} --}}
-                            </div>
-                            @enderror
-                        </div>
-                    </div>
-                </div>
-                <div class="ui visible yellow message">
-                    <i class="exclamation circle icon"></i>
-                    An email containing a system-generated password will be sent to your email.
-                </div>
-                <div id="emailNoMatch" class="ui visible error message" hidden>
-                    <i class="exclamation circle icon"></i>
-                    Unrecognized email
-                </div>
-                <div class="ui fluid !mt-5">
-                    <button id="btnConfirmFP" class="ui fluid small primary button">
-                        Confirm
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- Styling for logo animation -->
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+        }
+
+        .ui.form .field label {
+            font-weight: bold;
+            color: #4a5568;
+        }
+
+        .primary.button {
+            background-color: #4caf50 !important;
+            border-radius: 0.375rem;
+            color: white;
+        }
+
+        .primary.button:hover {
+            background-color: #388e3c !important;
+        }
+
+        .shadow-md {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .bg-gray-100 {
+            background-color: #f7fafc;
+        }
+
+        /* Add animation to the logo */
+        .h-20 {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .h-20:hover {
+            transform: scale(1.1);
+        }
+    </style>
 </body>
 
 </html>

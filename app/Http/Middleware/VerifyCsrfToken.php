@@ -14,6 +14,7 @@ class VerifyCsrfToken extends Middleware
     protected $except = [
         '/api/device/insert',
         '/api/device-time/end',
-        '/api/device/update'
+        '/api/device/update',
+        '/api/device-time/pause'
     ];
 }

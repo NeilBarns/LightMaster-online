@@ -10,7 +10,7 @@
     <link rel="icon" type="image/x-icon" href="{{ asset('imgs/lightmaster-icon.png') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- JQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{{ asset('js/jquery.min.js') }}"></script>
 
     <!-- Fonts -->
     <link href="https://fonts.bunny.net/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
@@ -19,26 +19,25 @@
     <link href="/css/app.css" rel="stylesheet"> --}}
 
     <!-- UIkit CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uikit@3.20.8/dist/css/uikit.min.css" />
+    <link rel="stylesheet" href="{{ asset('css/uikit.min.css') }}" />
 
     <!-- UIkit JS -->
-    <script defer src="https://cdn.jsdelivr.net/npm/uikit@3.20.8/dist/js/uikit.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/uikit@3.20.8/dist/js/uikit-icons.min.js"></script>
+    <script defer src="{{ asset('js/uikit.min.js') }}"></script>
+    <script defer src="{{ asset('js/uikit-icons.min.js') }}"></script>
 
     <!-- AG Grid -->
     {{-- <script defer src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script> --}}
-    <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/styles/ag-grid.css">
-    <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/styles/ag-theme-balham.css">
-    <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <link rel="stylesheet" href="{{ asset('css/ag-grid.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/ag-theme-balham.css') }}">
+    <script src="{{ asset('js/ag-grid-community.min.js') }}"></script>
 
     <!-- Chart.js  -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ asset('js/chart.js') }}"></script>
 
     <!-- Fomantic IU -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <link rel="stylesheet" type="text/css"
-        href="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.3/semantic.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.3/semantic.min.js"></script>
+    <script src="{{ asset('js/jquery.min.js') }}"></script>
+    <link rel="stylesheet" type="text/css" href="{{ asset('css/semantic.min.css') }}">
+    <script src="{{ asset('js/semantic.min.js') }}"></script>
 
 </head>
 
@@ -166,73 +165,125 @@
             }, duration);
         }
 
+        //Session timeout checker
+        function checkSession() {
+            fetch('/check-session', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.session_active) {
+                    window.location.href = '/login'; // Redirect to the login page
+                }
+            })
+            .catch(error => console.error('Error checking session:', error));
+        }
+
+        // Check session every 30 seconds
+        setInterval(checkSession, 30000);
+
+
         // Polling functionality
-        let pollingInterval = 10000;
-        let currentlyWatchedDevices = [];
-        let timeoutId = 0;
-        const MIN_POLLING_INTERVAL = 5000; // Minimum polling interval in milliseconds (e.g., 5 seconds)
+        if (document.querySelector('#device-management-page'))
+        {
+            const MIN_POLLING_INTERVAL = 10000; // 10 seconds
+            let pollingInterval;
+            let pollingTimeout;
 
-        function fetchActiveTransactions() {
-            console.log('timeoutId', timeoutId);
-            
-            fetch('/active-transactions')
-                .then(response => response.json())
-                .then(data => {
-                    const processedData = processDeviceTransactions(data);
-                    console.log('Processed Transaction Data:', processedData);
-                    pollingUpdateUI(data, processedData);
-                })
-                .catch(error => console.error('Error fetching transactions:', error));
-        }
+            function fetchActiveTransactions() {
+                console.log('Fetching active transactions...');
+                fetch('/active-transactions')
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Fetched data:', data);
 
-        function processDeviceTransactions(data) {
-            return data.map(transaction => {
-                let totalDuration = 0;
-                let totalRate = 0;
-                let startTime = null;
-                let endTime = null;
+                        const processedData = processDeviceTransactions(data);
+                        console.log('Processed Data:', processedData);
 
-                totalDuration += transaction.Duration;
-                totalRate += parseFloat(transaction.Rate);
-                if (!startTime) {
-                    startTime = new Date(transaction.StartTime).getTime();
+                        // If there are running timers, adjust the polling interval to the shortest interval.
+                        // Otherwise, set the polling interval to the minimum interval.
+                        adjustPollingInterval(processedData);
+                    })
+                    .catch(error => console.error('Error fetching transactions:', error));
+            }
+
+            function processDeviceTransactions(data) {
+                let shortestInterval = Infinity; // Start with a large value
+
+                const transactions = data.map(transaction => {
+                    let totalDuration = transaction.totalDuration;
+                    let startTime = new Date(transaction.StartTime).getTime();
+
+                    if (isNaN(startTime)) {
+                        console.log(`Invalid StartTime for DeviceID: ${transaction.DeviceID}`);
+                        return null; // Skip this transaction if StartTime is invalid
+                    }
+
+                    let endTime = startTime + totalDuration * 60 * 1000; // Convert totalDuration to milliseconds
+
+                    const currentTime = Date.now();
+                    const remainingTimeInSeconds = Math.max(0, Math.floor((endTime - currentTime) / 1000));
+
+                    // Add 3 seconds to the remaining time
+                    const adjustedRemainingTimeInSeconds = remainingTimeInSeconds + 3;
+
+                    console.log(`Remaining time for DeviceID ${transaction.DeviceID}: ${adjustedRemainingTimeInSeconds} seconds`);
+
+                    // Only calculate the interval for valid remaining times
+                    if (adjustedRemainingTimeInSeconds > 0) {
+                        const newInterval = adjustedRemainingTimeInSeconds * 1000; // Convert to milliseconds
+
+                        // Find the shortest remaining time
+                        if (newInterval < shortestInterval) {
+                            shortestInterval = newInterval;
+                        }
+                    }
+
+                    return {
+                        DeviceID: transaction.DeviceID,
+                        totalDuration,
+                        startTime: new Date(startTime).toISOString(),
+                        endTime: new Date(endTime).toISOString(),
+                        remainingTimeInSeconds: adjustedRemainingTimeInSeconds
+                    };
+                });
+
+                // Filter out null transactions (those with invalid start times)
+                const validTransactions = transactions.filter(transaction => transaction !== null);
+
+                return { validTransactions, shortestInterval };
+            }
+
+            function adjustPollingInterval({ validTransactions, shortestInterval }) {
+                if (validTransactions.length > 0 && shortestInterval < Infinity) {
+                    // If there are active timers, use the shortest remaining time as the polling interval
+                    pollingInterval = Math.max(shortestInterval, MIN_POLLING_INTERVAL);
+                } else {
+                    // If there are no active timers, use the minimum polling interval
+                    pollingInterval = MIN_POLLING_INTERVAL;
                 }
 
-                if (startTime !== null) {
-                    endTime = (startTime + totalDuration * 60 * 1000) - 5000; // Convert total duration to milliseconds
+                console.log(`Final polling interval set to: ${pollingInterval} ms`);
+
+                // Clear the current timeout
+                if (pollingTimeout) {
+                    clearTimeout(pollingTimeout);
                 }
 
-                totalRate = totalRate.toFixed(2);
+                // Set the new interval based on the calculated polling interval
+                pollingTimeout = setTimeout(function () {
+                    console.log('Timeout reached. Reloading the page...');
+                    location.reload(); // Refresh the page after the interval has been reached
+                }, pollingInterval);
+            }
 
-                const currentTime = Date.now();
-                const remainingTimeInSeconds = endTime ? Math.max(0, Math.floor((endTime - currentTime) / 1000)) : 0;
-                console.log('remainingTimeInSeconds', remainingTimeInSeconds);
-                
-                // Set polling interval based on remaining time, ensuring it does not go below the minimum interval
-                pollingInterval = Math.max(remainingTimeInSeconds * 1000, MIN_POLLING_INTERVAL);
-
-                return {
-                    DeviceID: transaction.DeviceID,
-                    totalDuration,
-                    totalRate,
-                    startTime: startTime ? new Date(startTime).toISOString() : null,
-                    endTime: endTime ? new Date(endTime).toISOString() : null,
-                    remainingTimeInSeconds
-                };
-            });
+            // Initial fetch and start polling
+            fetchActiveTransactions();
         }
-
-        function startPolling() {
-            console.log('pollingInterval', pollingInterval);
-
-            //clearTimeout(timeoutId); // Clear any existing timeout
-
-            //fetchActiveTransactions();
-
-            // Set a new timeout with the updated interval
-            //timeoutId = setTimeout(startPolling, pollingInterval);
-        }
-
+        
         function isEmptyArray(data) {
             return Array.isArray(data) && data.length === 0;
         }
@@ -282,7 +333,7 @@
             console.log('Active transactions:', data);
         }
 
-        startPolling();
+        
 
         function updateStatusRibbon(deviceId, newStatus) {
             const statusRibbon = document.getElementById(`device-status-${deviceId}`);
