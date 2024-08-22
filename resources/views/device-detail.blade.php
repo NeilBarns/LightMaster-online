@@ -204,7 +204,7 @@ use App\Enums\PermissionsEnum;
         </div>
         <div class="row">
             <div class="column">
-                <form class="ui form" action="{{ route('device-time.base') }}" method="POST">
+                <form class="ui form" method="POST">
                     @csrf
                     <div class="ui three column stackable grid">
                         <div class="four wide column">
@@ -212,8 +212,8 @@ use App\Enums\PermissionsEnum;
                                 <label>Base start time</label>
                             </div>
                             <div class="ui fluid small right labeled input">
-                                <input type="number" name="base_time" value="{{ $baseTime ? $baseTime->Time : '' }}"
-                                    placeholder="60" required>
+                                <input type="number" name="base_time" id="txt_base_time"
+                                    value="{{ $baseTime ? $baseTime->Time : '' }}" placeholder="60" required>
                                 <div class="ui basic label">
                                     minutes
                                 </div>
@@ -224,7 +224,7 @@ use App\Enums\PermissionsEnum;
                                 <label>Base start rate</label>
                             </div>
                             <div class="ui fluid small right labeled input">
-                                <input type="number" step="0.01" name="base_rate"
+                                <input type="number" step="0.01" name="base_rate" id="txt_base_rate"
                                     value="{{ $baseTime ? $baseTime->Rate : '' }}" placeholder="30.00" required>
                                 <div class="ui basic label">
                                     PHP
@@ -237,7 +237,7 @@ use App\Enums\PermissionsEnum;
                             <div class="field">
                                 <label class="invisible">search</label>
                             </div>
-                            <button type="submit" class="ui fluid small blue button">Save</button>
+                            <button id="saveBaseTime" type="button" class="ui fluid small blue button">Save</button>
                         </div>
                         @endcan
 
@@ -1042,6 +1042,53 @@ use App\Enums\PermissionsEnum;
             }
         });
 
+
+        const saveBaseTimeButton = document.getElementById('saveBaseTime');
+        const txt_base_time = document.getElementById('txt_base_time');
+        const txt_base_rate = document.getElementById('txt_base_rate');
+
+        if (saveBaseTimeButton)
+        {
+            saveBaseTimeButton.addEventListener('click', function () {
+                const newBaseTime = txt_base_time.value;  
+                const newBaseRate = txt_base_rate.value;  
+                
+                if (newBaseTime > 0 && newBaseRate > 0) {
+                    showLoading();
+
+                    setTimeout(() => {
+                        fetch('/device-time/base', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}' // Ensure you have this token for Laravel
+                            },
+                            body: JSON.stringify({
+                                base_time: newBaseTime,
+                                base_rate: newBaseRate,
+                                device_id: '{{ $device->DeviceID }}'
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            hideLoading(); // Hide loading after the request completes
+                            if (data.success) {
+                                showToast(data.message, 'success');
+                            } else {
+                                showToast(data.message || 'An error occurred.', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            hideLoading();
+                            console.log('Fetch error:', error);
+                            showToast('An error occurred. Please try again.', 'error');
+                        });
+                    }, 2000);
+                } else {
+                    showToast('Please enter a valid base time and rate greater than 0.');
+                }
+            });
+        }
 
         const saveWatchdogIntervalButton = document.getElementById('saveWatchdogInterval');
         const txt_watchdogInterval = document.getElementById('txt_watchdogInterval');

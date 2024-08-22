@@ -60,40 +60,44 @@ class DeviceTimeController extends Controller
             ->where('TimeTypeID', DeviceTime::TIME_TYPE_BASE)
             ->first();
 
-        if ($baseTime) {
-            // Update the existing base time
-            $baseTime->update([
-                'Time' => $request->base_time,
-                'Rate' => $request->base_rate,
-            ]);
+        try {
+            if ($baseTime) {
+                // Update the existing base time
+                $baseTime->update([
+                    'Time' => $request->base_time,
+                    'Rate' => $request->base_rate,
+                ]);
 
 
-            LoggingController::InsertLog(
-                LogEntityEnum::DEVICE_TIME,
-                $request->device_id,
-                'Updated base time ' . $baseTime->Time . ' to ' . $request->base_time . ' and base rate ' . $baseTime->Rate . ' to ' . $request->base_rate . ' for device: ' . $device->DeviceName,
-                LogTypeEnum::INFO,
-                auth()->id()
-            );
-        } else {
-            // Create a new base time
-            DeviceTime::create([
-                'DeviceID' => $request->device_id,
-                'Time' => $request->base_time,
-                'Rate' => $request->base_rate,
-                'TimeTypeID' => DeviceTime::TIME_TYPE_BASE,
-            ]);
+                LoggingController::InsertLog(
+                    LogEntityEnum::DEVICE_TIME,
+                    $request->device_id,
+                    'Updated base time ' . $baseTime->Time . ' to ' . $request->base_time . ' and base rate ' . $baseTime->Rate . ' to ' . $request->base_rate . ' for device: ' . $device->DeviceName,
+                    LogTypeEnum::INFO,
+                    auth()->id()
+                );
+            } else {
+                // Create a new base time
+                DeviceTime::create([
+                    'DeviceID' => $request->device_id,
+                    'Time' => $request->base_time,
+                    'Rate' => $request->base_rate,
+                    'TimeTypeID' => DeviceTime::TIME_TYPE_BASE,
+                ]);
 
-            LoggingController::InsertLog(
-                LogEntityEnum::DEVICE_TIME,
-                $request->device_id,
-                'Added base time: ' . $request->base_time . ' and base rate: ' . $request->base_rate . ' for device: ' . $device->DeviceName,
-                LogTypeEnum::INFO,
-                auth()->id()
-            );
+                LoggingController::InsertLog(
+                    LogEntityEnum::DEVICE_TIME,
+                    $request->device_id,
+                    'Added base time: ' . $request->base_time . ' and base rate: ' . $request->base_rate . ' for device: ' . $device->DeviceName,
+                    LogTypeEnum::INFO,
+                    auth()->id()
+                );
+            }
+
+            return response()->json(['success' => true, 'message' => 'Base time and rate saved successfully.']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], 500);
         }
-
-        return redirect()->back()->with('success', 'Base time and rate added/updated successfully.');
     }
 
     public function UpdateDeviceIncrement(Request $request, $id)

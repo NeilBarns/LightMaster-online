@@ -1,3 +1,43 @@
+@php
+$greetings = [
+'Good day ☀️',
+'Hello 👋',
+'Hi 😊',
+'Greetings 🙌',
+'Welcome 🎉',
+'Nice to see you 👏',
+'Hey 😃',
+'Good to see you 👍',
+'Howdy 🤠',
+'What’s up 🤔',
+'Good to have you here 🫱',
+'Hope you’re doing well 💪',
+'Glad you’re back 🎊',
+'Pleasure to see you 😊',
+'Hiya 🤗',
+'Ahoy 🏴‍☠️',
+'Salutations 🖖',
+'How’s it going 🚀',
+'Look who it is 👀',
+'A warm welcome to you 🔥',
+'Good vibes only ✨',
+'Happy to see you 😄',
+'Cheers 🍻',
+'Yo 🤟',
+'How are things? 🤓',
+'Great to have you 💫',
+'Let’s get started! 🚀',
+'Welcome back 👋',
+'You’re awesome 🤩',
+'Feeling good? 😎',
+'Let’s make today great 🌟'
+];
+
+
+// Pick a random greeting
+$randomGreeting = $greetings[array_rand($greetings)];
+@endphp
+
 @extends('components.layout')
 
 @section('page-title')
@@ -7,44 +47,13 @@
 
 @section('content')
 <div class="flex flex-col h-full px-5 py-7" id="device-management-page">
-    <form class="ui form">
-        @csrf
-        <div class="ui three column stackable grid">
-            <div class="four wide column">
-                <div class="field">
-                    <label>Device name</label>
-                </div>
-                <div class="ui fluid small input">
-                    <input type="text" placeholder="Light 1...">
-                </div>
-            </div>
-            <div class="four wide column">
-                <div class="field">
-                    <label>Status</label>
-                </div>
-                <div class="ui fluid small selection dropdown">
-                    <input type="hidden" name="increment">
-                    <i class="dropdown icon"></i>
-                    <div class="default text">Status</div>
-                    <div class="menu">
-                        <div class="item" data-value="1">Pending</div>
-                        <div class="item" data-value="2">Running</div>
-                        <div class="item" data-value="3">Inactive</div>
-                        <div class="item" data-value="4">Disabled</div>
-                    </div>
-                </div>
-            </div>
-            <div class="three wide column">
-                <div class="field">
-                    <label class="invisible">search</label>
-                </div>
-                <button class="ui fluid small blue button">Search</button>
-            </div>
+    <div class="ui one column stackable grid">
+        <div class="column">
+            <div class="ui large header">{{ $randomGreeting }}, {{ auth()->user()->FirstName }}!</div>
         </div>
+    </div>
 
-        <div class="ui divider"></div>
-
-    </form>
+    <div class="ui divider"></div>
 
     @if($devices->isEmpty())
     <div class="ui flex cards h-full overflow-y-auto justify-center align-middle">
