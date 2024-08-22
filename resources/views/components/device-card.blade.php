@@ -1,4 +1,5 @@
-@props(['device', 'baseTime', 'increments', 'totalTime', 'totalRate', 'startTime', 'endTime', 'remainingTime'])
+@props(['device', 'baseTime', 'increments', 'totalTime', 'totalRate', 'startTime', 'endTime', 'remainingTime',
+'remTimeNotif'])
 
 @php
 use App\Enums\DeviceStatusEnum;
@@ -43,12 +44,17 @@ break;
 $increments = $device->increments;
 @endphp
 
-<div class="ui card h-[315px] !w-[300px] !mr-6">
-
+<div id="device-card-{{ $device->DeviceID }}" class="ui card !h-[350px] !w-[300px] !mr-6"
+    data-device-id="{{ $device->DeviceID }}" data-remaining-time="{{ $remainingTime }}"
+    data-remainingTimeNotif="{{ $device->RemainingTimeNotification }}">
+    <div id="device-sync-{{ $device->DeviceID }}"
+        class="syncScreen h-full absolute top-0 w-full z-10 justify-center !hidden">
+        <p class=" text-2xl">Syncing...</p>
+    </div>
     <a id="notification-banner-{{ $device->DeviceID }}"
         class="ui yellow inverted tag label notification-banner">Extended
         time</a>
-    <div class="content !max-h-60">
+    <div class="content !max-h-72">
         <div class="header mb-2">
             <span class="text-base">{{ $device->ExternalDeviceName }}</span>
             @can([PermissionsEnum::CAN_VIEW_DEVICE_DETAILS, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
@@ -63,7 +69,7 @@ $increments = $device->increments;
             @endcan
         </div>
 
-        <a id="device-status-{{ $device->DeviceID }}" class="ui {{ $statusClass }} ribbon label">
+        <a id="device-status-{{ $device->DeviceID }}" class="ui {{ $statusClass }} ribbon label z-50">
             @if ($device->deviceStatus->Status == DeviceStatusEnum::PAUSE)
             {{ "Paused: " . convertSecondsToTimeFormat($remainingTime) }}
             @else
@@ -106,6 +112,12 @@ $increments = $device->increments;
             <p id="lblTotalRate-{{ $device->DeviceID }}">Total charge/rate: PHP 0.00</p>
             </p>
             @endif
+
+            <div class="remaining-time-container" data-device-id="{{ $device->DeviceID }}"
+                data-remaining-time="{{ $remainingTime }}"
+                data-device-status="{{ strtolower($device->deviceStatus->Status) }}">
+                <p class="remaining-time">Remaining time: {{ gmdate('H:i:s', $remainingTime) }}</p>
+            </div>
 
         </div>
     </div>
@@ -300,7 +312,7 @@ $increments = $device->increments;
                 })
                 .then(data => {
                     if (data.success) {
-                        fetchActiveTransactions();
+                        fetchActiveTransactions(); location.reload();
                         hideLoading();
                         showNotification(deviceId, 'Extended time');
                         updateUI(deviceId, new Date(data.startTime), new Date(data.endTime), data.totalTime, data.totalRate);
@@ -348,7 +360,7 @@ $increments = $device->increments;
                 hideLoading();
                 if (data.success) {
                     if (action === 'start') {
-                        fetchActiveTransactions();
+                        fetchActiveTransactions(); location.reload();
                         this.textContent = 'End time';
                         this.classList.add('red');
                         const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
@@ -411,7 +423,7 @@ $increments = $device->increments;
                 hideLoading();
                 if (data.success) {
                     if (action === 'pause') {
-                        fetchActiveTransactions();
+                        fetchActiveTransactions(); location.reload();
                         this.textContent = 'Resume';
                         this.classList.add('green');
                         const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
@@ -429,7 +441,7 @@ $increments = $device->increments;
                         updateStatusRibbon(deviceId, 'Paused: ' + convertSecondsToTimeFormat(data.remaining_time));
                     }
                     else {
-                        fetchActiveTransactions();
+                        fetchActiveTransactions(); location.reload();
                         this.textContent = 'Pause time';
                         this.classList.remove('green');
                         const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
@@ -487,7 +499,7 @@ $increments = $device->increments;
                     })
                     .then(data => {
                         if (data.success) {
-                            fetchActiveTransactions();
+                            fetchActiveTransactions(); location.reload();
                             hideLoading();
                             showNotification(deviceId, 'Extended time');
                             updateUI(deviceId, new Date(data.startTime), new Date(data.endTime), data.totalTime, data.totalRate);
@@ -522,7 +534,7 @@ $increments = $device->increments;
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    fetchActiveTransactions();
+                    fetchActiveTransactions(); location.reload();
                     $(`#endTimeModal-${deviceId}`).modal('hide');
                     const startButton = document.querySelector(`.start-time-button[data-id="${deviceId}"]`);
                     const baseRate = startButton.getAttribute('data-rate');

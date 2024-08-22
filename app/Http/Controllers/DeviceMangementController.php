@@ -287,8 +287,6 @@ class DeviceMangementController extends Controller
                 ],
             ]);
 
-            Log::info('Sent watchdog interval:', ['interval' => $newWatchdogInterval]);
-
             if ($response->getStatusCode() == 200) {
                 // Update the interval only if the device update was successful
                 $device->WatchdogInterval = $newWatchdogInterval;

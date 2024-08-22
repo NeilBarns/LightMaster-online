@@ -47,9 +47,10 @@
         .then(response => response.json())
         .then(data => {
             hideLoading();
+            console.log(data);
             if (data.success) {
                 $(freeLightModal).modal('hide');
-                window.location.href = '/device';
+                 window.location.href = '/device';
             } else {
                 alert('Failed to activate free light. Please try again.');
             }

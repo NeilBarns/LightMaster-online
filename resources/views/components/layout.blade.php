@@ -13,7 +13,8 @@
     <script src="{{ asset('js/jquery.min.js') }}"></script>
 
     <!-- Fonts -->
-    <link href="https://fonts.bunny.net/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    {{--
+    <link href="https://fonts.bunny.net/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet"> --}}
 
     {{--
     <link href="/css/app.css" rel="stylesheet"> --}}
@@ -276,7 +277,7 @@
                 // Set the new interval based on the calculated polling interval
                 pollingTimeout = setTimeout(function () {
                     console.log('Timeout reached. Reloading the page...');
-                    location.reload(); // Refresh the page after the interval has been reached
+                    //location.reload(); // Refresh the page after the interval has been reached
                 }, pollingInterval);
             }
 

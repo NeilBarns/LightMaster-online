@@ -58,71 +58,50 @@
         @php
         $remainingTime = 0;
         $startTime = 0;
+        $endTime = null;
+        $totalTime = 0; // Initialize totalTime
 
-        if ($device->DeviceStatusID == \App\Enums\DeviceStatusEnum::PAUSE_ID) {
-        $pauseTransaction = \App\Models\DeviceTimeTransactions::where('DeviceID', $device->DeviceID)
-        ->where('TransactionType', \App\Enums\TimeTransactionTypeEnum::PAUSE)
-        ->where('Active', true)
-        ->orderBy('TransactionID', 'desc')
+        // Fetch base time if applicable
+        $baseTime = \App\Models\DeviceTime::where('DeviceID', $device->DeviceID)
+        ->where('TimeTypeID', 1)
         ->first();
 
-        if ($pauseTransaction)
-        {
-        $remainingTime = $pauseTransaction ? $pauseTransaction->Duration : 0;
-        }
-
-        }
-
+        // Fetch active transactions for the device
         $activeTransactions = \App\Models\DeviceTimeTransactions::where('DeviceID', $device->DeviceID)
         ->where('Active', true)
         ->whereIn('TransactionType', [\App\Enums\TimeTransactionTypeEnum::START,
         \App\Enums\TimeTransactionTypeEnum::EXTEND])
         ->get();
 
-        $baseTime = \App\Models\DeviceTime::where('DeviceID', $device->DeviceID)
-        ->where('TimeTypeID', 1)->first();
-
+        if ($activeTransactions->isNotEmpty()) {
         $totalTime = $activeTransactions->sum('Duration');
         $totalRate = number_format($activeTransactions->sum('Rate'), 2);
 
         $startTransaction = $activeTransactions->where('TransactionType',
         \App\Enums\TimeTransactionTypeEnum::START)->first();
         $startTime = $startTransaction ? $startTransaction->StartTime : null;
-        $endTime = $startTime ? \Carbon\Carbon::parse($startTime)->addMinutes($totalTime) : null;
 
-        //Analyze if the time came from Pause and gonna be Resumed
-        $transactionList = \App\Models\DeviceTimeTransactions::where('DeviceID', $device->DeviceID)
-        ->where('Active', true)
-        ->orderBy('TransactionID', 'desc')
-        ->first();
-
-        if ($transactionList)
-        {
-
-        $transactionType = $transactionList->TransactionType;
-        if ($transactionType == \App\Enums\TimeTransactionTypeEnum::RESUME)
-        {
-
-        //Get the latest Pause
-        $pauseTransaction = \App\Models\DeviceTimeTransactions::where('DeviceID', $device->DeviceID)
-        ->where('TransactionType', \App\Enums\TimeTransactionTypeEnum::PAUSE)
-        ->where('Active', true)
-        ->orderBy('TransactionID', 'asc')
-        ->first();
-
-        if ($pauseTransaction)
-        {
-        //Compute for the remaining time
-        $remainingTime = $pauseTransaction ? $pauseTransaction->Duration : 0;
+        // Calculate end time based on start time and total time
+        if ($startTime) {
+        $endTime = \Carbon\Carbon::parse($startTime)->addMinutes($totalTime);
         }
-        $endTime = $transactionList->StartTime->addSeconds($remainingTime);
+
+        // Calculate the remaining time
+        if ($endTime) {
+        $remainingTime = \Carbon\Carbon::now()->diffInSeconds($endTime, false); // Calculate remaining time in seconds
+        $remainingTime = $remainingTime > 0 ? $remainingTime : 0; // Ensure it's not negative
         }
+        } else {
+        $totalRate = 0; // Ensure totalRate is 0 if no transactions
         }
+
+        $remTimeNotif = $device->RemainingTimeNotification;
 
         @endphp
         <x-device-card :device="$device" :totalTime="$totalTime" :baseTime="$baseTime" :totalRate="$totalRate"
-            :startTime="$startTime" :endTime="$endTime" :remainingTime="$remainingTime" />
+            :startTime="$startTime" :endTime="$endTime" :remainingTime="$remainingTime" :remTimeNotif="$remTimeNotif" />
         @endforeach
+
     </div>
 
     @endif
@@ -135,5 +114,84 @@
         </button>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    // Initialize timers for each device
+    const deviceCards = document.querySelectorAll('[data-remaining-time]');
+
+    deviceCards.forEach(function(card) {
+        const deviceId = card.getAttribute('data-device-id');
+        let remainingTime = parseInt(card.getAttribute('data-remaining-time'));
+        const deviceStatus = card.getAttribute('data-device-status'); // Get the device status
+
+        const timerElement = card.querySelector('.remaining-time');
+
+        // Function to update the displayed time
+        function updateTimer(timerElement, remainingTime) {
+            const hours = Math.floor(remainingTime / 3600);
+            const minutes = Math.floor((remainingTime % 3600) / 60);
+            const seconds = remainingTime % 60;
+            timerElement.textContent = `Remaining time: ${hours}h ${minutes}m ${seconds}s`;
+        }
+
+        const deviceSync = document.getElementById(`device-sync-${deviceId}`);
+        const deviceCard = document.getElementById(`device-card-${deviceId}`);
+        let deviceRemTimeNotif = deviceCard.getAttribute('data-remainingTimeNotif');
+        console.log(deviceRemTimeNotif);
+        function startCountdown(remainingTime, timerElement, deviceId) {
+            let interval = setInterval(function() {
+                if (remainingTime > 0) {
+                    remainingTime--;
+                    
+                    if (deviceRemTimeNotif !== null && deviceRemTimeNotif > 0)
+                    {
+                        if (remainingTime <= deviceRemTimeNotif * 60)
+                        {
+                            deviceCard.classList.add('!bg-amber-200');   
+                            card.classList.add('!font-bold');
+                            card.classList.add('!text-xl');
+                        }
+                    }
+
+                    updateTimer(timerElement, remainingTime);
+                } else {
+                    // Clear the interval once the countdown reaches 0
+                    clearInterval(interval);
+                    if (deviceSync) {
+                        deviceSync.classList.remove('!hidden');
+                        deviceSync.classList.add('!flex');
+                    }
+
+                    // Optionally reload the page after 10 seconds
+                    setTimeout(() => {
+                        location.reload();
+                    }, 10000);
+                }
+            }, 1000);
+
+            return interval; // Return the interval so it can be cleared elsewhere if needed
+        }
+
+        // If the device is paused, display the remaining time but do not start the countdown
+        if (deviceStatus === 'pause') {
+            updateTimer(timerElement, remainingTime); // Display the remaining time
+        } 
+        // If the device is running or resumed, start the countdown
+        else if (deviceStatus === 'running' || deviceStatus === 'resume') {
+            startCountdown(remainingTime, timerElement);
+        } else {
+            // console.log(`Device ${deviceId} is in an unknown state: ${deviceStatus}`);
+        }
+    });
+});
+
+document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') {
+        // Refresh the page when the user comes back to the tab
+        location.reload();
+    }
+});
+</script>
 
 @endsection

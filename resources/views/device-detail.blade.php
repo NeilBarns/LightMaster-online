@@ -1048,7 +1048,7 @@ use App\Enums\PermissionsEnum;
 
         if (saveWatchdogIntervalButton) {
             saveWatchdogIntervalButton.addEventListener('click', function () {
-                const newDeviceWDInterval = parseInt(txt_watchdogInterval.value, 30);  
+                const newDeviceWDInterval = txt_watchdogInterval.value;  
                 
                 if (newDeviceWDInterval > 0) {
                     showLoading();
@@ -1093,7 +1093,7 @@ use App\Enums\PermissionsEnum;
 
         if (saveRemainingTime) {
             saveRemainingTime.addEventListener('click', function () {
-                const newRemainingTime = parseInt(txt_remainingTime.value, 0);  
+                const newRemainingTime = txt_remainingTime.value;  
                 
                 if (newRemainingTime > -1) {
                     showLoading();
