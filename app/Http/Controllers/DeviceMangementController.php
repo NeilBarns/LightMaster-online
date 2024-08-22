@@ -19,16 +19,20 @@ class DeviceMangementController extends Controller
     {
         $devices = Device::with(['deviceStatus', 'increments' => function ($query) {
             $query->where('Active', true);
-        }])->get();
+        }])
+            ->leftJoin('DeviceTimeTransactions', function ($join) {
+                $join->on('DeviceTimeTransactions.DeviceID', '=', 'Devices.DeviceID')
+                    ->where('DeviceTimeTransactions.Active', true)
+                    ->whereIn('DeviceTimeTransactions.TransactionType', [\App\Enums\TimeTransactionTypeEnum::START, \App\Enums\TimeTransactionTypeEnum::EXTEND]);
+            })
+            ->select('Devices.*')
+            ->orderByRaw('CASE WHEN DeviceTimeTransactions.TransactionID IS NOT NULL THEN 0 ELSE 1 END') // Running devices first
+            ->orderBy('Devices.ExternalDeviceName') // Then sort by name
+            ->get();
 
-        // Check if the request expects a JSON response
-        if ($request->expectsJson()) {
-            return response()->json(['devices' => $devices]);
-        }
-
-        // Otherwise, return the view
         return view('devicemanagement', compact('devices'));
     }
+
 
     public function GetDeviceDetails($id)
     {
