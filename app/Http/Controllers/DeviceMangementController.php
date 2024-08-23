@@ -26,10 +26,12 @@ class DeviceMangementController extends Controller
                         ->where('DeviceTimeTransactions.Active', true)
                         ->whereIn('DeviceTimeTransactions.TransactionType', [\App\Enums\TimeTransactionTypeEnum::START, \App\Enums\TimeTransactionTypeEnum::EXTEND]);
                 })
-                ->select('Devices.*')
+                ->select('Devices.*') // Keep the distinct device columns
+                ->distinct()  // Ensure unique devices
                 ->orderByRaw('CASE WHEN DeviceTimeTransactions.TransactionID IS NOT NULL THEN 0 ELSE 1 END') // Running devices first
                 ->orderBy('Devices.ExternalDeviceName') // Then sort by name
                 ->get();
+
             return view('devicemanagement', compact('devices'));
         } catch (\Exception $e) {
             Log::error('Error fetching devices', ['error' => $e->getMessage()]);
@@ -59,6 +61,18 @@ class DeviceMangementController extends Controller
             Log::error('Error fetching device details for DeviceID: ' . $id, ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Failed to retrieve device details.'], 500);
         }
+    }
+
+    public function UpdateDeviceOperationDate($id)
+    {
+        $device = Device::findOrFail($id);
+        $device->DeviceStatusID = DeviceStatusEnum::INACTIVE_ID;
+        $device->OperationDate = Carbon::now();
+        $device->save();
+
+        LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Deployment', LogTypeEnum::INFO, auth()->id());
+
+        return redirect()->route('device.detail', $id)->with('status', 'Device deployed successfully');
     }
 
     public function InsertDeviceDetails(Request $request)

@@ -312,10 +312,13 @@ $increments = $device->increments;
                 })
                 .then(data => {
                     if (data.success) {
-                        fetchActiveTransactions(); location.reload();
+                        fetchActiveTransactions(); 
                         hideLoading();
                         showNotification(deviceId, 'Extended time');
                         updateUI(deviceId, new Date(data.startTime), new Date(data.endTime), data.totalTime, data.totalRate);
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
                     } else {
                         hideLoading();
                         showToast("An error occured. Please see logs for more info");
@@ -496,10 +499,13 @@ $increments = $device->increments;
                     })
                     .then(data => {
                         if (data.success) {
-                            fetchActiveTransactions(); location.reload();
+                            fetchActiveTransactions();
                             hideLoading();
                             showNotification(deviceId, 'Extended time');
                             updateUI(deviceId, new Date(data.startTime), new Date(data.endTime), data.totalTime, data.totalRate);
+                            setTimeout(() => {
+                            location.reload();
+                        }, 1000);
                         } else {
                             hideLoading();
                             showToast("An error occured. Please see logs for more info");
