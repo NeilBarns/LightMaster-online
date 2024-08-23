@@ -43,9 +43,9 @@ Route::post('/api/device-time/pause', [DeviceTimeController::class, 'PauseDevice
 
 // Authenticated Routes
 Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::get('/device', function () {
+        return view('device');
+    })->name('device');
 
     // DEVICE CONTROLLERS
     Route::get('/device', [DeviceMangementController::class, 'GetDevices'])->name('devicemanagement');
