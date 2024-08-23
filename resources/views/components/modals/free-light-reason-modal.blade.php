@@ -52,13 +52,13 @@
                 $(freeLightModal).modal('hide');
                  window.location.href = '/device';
             } else {
-                alert('Failed to activate free light. Please try again.');
+                showToast('Failed to activate free light. Please try again.');
             }
         })
         .catch(error => {
             hideLoading();
             console.error('Error:', error);
-            alert('An error occurred. Please try again.');
+            showToast('An error occurred. Please try again.');
         });
     });
 

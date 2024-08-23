@@ -689,7 +689,7 @@ use App\Enums\PermissionsEnum;
                         }, 9000); // 10000 milliseconds = 10 seconds
 
                     } else {
-                        alert('Failed to test device: ' + response.message);
+                        showToast("An error occured. Please see logs for more info");
 
                         // Re-enable buttons immediately if testing fails
                         // buttons.prop('disabled', false);
@@ -697,7 +697,7 @@ use App\Enums\PermissionsEnum;
                     }
                 },
                 error: function(xhr, status, error) {
-                    alert('An error occurred: ' + xhr.responseText);
+                    showToast("An error occured. Please see logs for more info");
 
                     // Re-enable buttons immediately on error
                     // buttons.prop('disabled', false);
@@ -975,13 +975,12 @@ use App\Enums\PermissionsEnum;
                     if (data.success) {
                         window.location.href = '/device';
                     } else {
-                        alert('Failed to stop free light. Please try again.');
+                        showToast("An error occured. Please see logs for more info");
                     }
                 })
                 .catch(error => {
                     hideLoading();
-                    console.error('Error:', error);
-                    alert('An error occurred. Please try again.');
+                    showToast("An error occured. Please see logs for more info");
                 });
             }
         });
@@ -1029,16 +1028,16 @@ use App\Enums\PermissionsEnum;
                             editDeviceNameButton.style.display = 'inline-block';
                             editDeviceNameSection.classList.add('!hidden');
                         } else {
-                            alert('Failed to update the device name.');
+                            showToast("An error occured. Please see logs for more info");
                         }
                     })
                     .catch(error => {
                         hideLoading(); // Hide loading in case of an error
-                        console.error('Error:', error);
+                        showToast("An error occured. Please see logs for more info");
                     });
                 }, 2000);
             } else {
-                alert('Please enter a valid device name.');
+                showToast('Please enter a valid device name.');
             }
         });
 
@@ -1129,7 +1128,7 @@ use App\Enums\PermissionsEnum;
                         });
                     }, 2000);
                 } else {
-                    alert('Please enter a valid interval greater than 0.');
+                    showToast('Please enter a valid interval greater than 0.');
                 }
             });
         }
@@ -1168,13 +1167,12 @@ use App\Enums\PermissionsEnum;
                             }
                         })
                         .catch(error => {
-                            hideLoading(); // Hide loading in case of an error
-                            console.log('Fetch error:', error);
+                            hideLoading();
                             showToast('An error occurred. Please try again.', 'error');
                         });
                     }, 2000);
                 } else {
-                    alert('Please enter a valid interval greater than -1.');
+                    showToast('Please enter a valid interval greater than -1.');
                 }
             });
         }

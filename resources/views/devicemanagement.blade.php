@@ -49,7 +49,7 @@ $randomGreeting = $greetings[array_rand($greetings)];
 <div class="flex flex-col h-full px-5 py-7" id="device-management-page">
     <div class="ui one column stackable grid">
         <div class="column">
-            <div class="ui large header">{{ $randomGreeting }}, {{ auth()->user()->FirstName }}!</div>
+            <div class="ui header">{{ $randomGreeting }}, {{ auth()->user()->FirstName }}!</div>
         </div>
     </div>
 

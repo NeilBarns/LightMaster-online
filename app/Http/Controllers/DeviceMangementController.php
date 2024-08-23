@@ -17,52 +17,48 @@ class DeviceMangementController extends Controller
 {
     public function GetDevices(Request $request)
     {
-        $devices = Device::with(['deviceStatus', 'increments' => function ($query) {
-            $query->where('Active', true);
-        }])
-            ->leftJoin('DeviceTimeTransactions', function ($join) {
-                $join->on('DeviceTimeTransactions.DeviceID', '=', 'Devices.DeviceID')
-                    ->where('DeviceTimeTransactions.Active', true)
-                    ->whereIn('DeviceTimeTransactions.TransactionType', [\App\Enums\TimeTransactionTypeEnum::START, \App\Enums\TimeTransactionTypeEnum::EXTEND]);
-            })
-            ->select('Devices.*')
-            ->orderByRaw('CASE WHEN DeviceTimeTransactions.TransactionID IS NOT NULL THEN 0 ELSE 1 END') // Running devices first
-            ->orderBy('Devices.ExternalDeviceName') // Then sort by name
-            ->get();
-
-        return view('devicemanagement', compact('devices'));
+        try {
+            $devices = Device::with(['deviceStatus', 'increments' => function ($query) {
+                $query->where('Active', true);
+            }])
+                ->leftJoin('DeviceTimeTransactions', function ($join) {
+                    $join->on('DeviceTimeTransactions.DeviceID', '=', 'Devices.DeviceID')
+                        ->where('DeviceTimeTransactions.Active', true)
+                        ->whereIn('DeviceTimeTransactions.TransactionType', [\App\Enums\TimeTransactionTypeEnum::START, \App\Enums\TimeTransactionTypeEnum::EXTEND]);
+                })
+                ->select('Devices.*')
+                ->orderByRaw('CASE WHEN DeviceTimeTransactions.TransactionID IS NOT NULL THEN 0 ELSE 1 END') // Running devices first
+                ->orderBy('Devices.ExternalDeviceName') // Then sort by name
+                ->get();
+            return view('devicemanagement', compact('devices'));
+        } catch (\Exception $e) {
+            Log::error('Error fetching devices', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to retrieve devices.'], 500);
+        }
     }
-
 
     public function GetDeviceDetails($id)
     {
-        $device = Device::with('deviceStatus')->findOrFail($id);
-        $baseTime = DeviceTime::where('DeviceID', $id)->where('TimeTypeID', DeviceTime::TIME_TYPE_BASE)->first();
-        $deviceTimes = DeviceTime::where('DeviceID', $id)->where('TimeTypeID', DeviceTime::TIME_TYPE_INCREMENT)->get();
+        try {
+            $device = Device::with('deviceStatus')->findOrFail($id);
+            $baseTime = DeviceTime::where('DeviceID', $id)->where('TimeTypeID', DeviceTime::TIME_TYPE_BASE)->first();
+            $deviceTimes = DeviceTime::where('DeviceID', $id)->where('TimeTypeID', DeviceTime::TIME_TYPE_INCREMENT)->get();
 
-        $deviceTimeTransactions = DeviceTimeTransactions::where('DeviceID', $id)->where('Active', true)->get();
+            $deviceTimeTransactions = DeviceTimeTransactions::where('DeviceID', $id)->where('Active', true)->get();
 
-        $totalTime = $deviceTimeTransactions->sum('Duration');
-        $totalRate = $deviceTimeTransactions->sum('Rate');
+            $totalTime = $deviceTimeTransactions->sum('Duration');
+            $totalRate = $deviceTimeTransactions->sum('Rate');
 
-        $rptDeviceTimeTransactions = RptDeviceTimeTransactions::where('DeviceID', $id)
-            ->whereDate('Time', Carbon::now())
-            ->with('creator')
-            ->get();
+            $rptDeviceTimeTransactions = RptDeviceTimeTransactions::where('DeviceID', $id)
+                ->whereDate('Time', Carbon::now())
+                ->with('creator')
+                ->get();
 
-        return view('device-detail', compact('device', 'baseTime', 'deviceTimes', 'deviceTimeTransactions', 'totalTime', 'totalRate', 'rptDeviceTimeTransactions'));
-    }
-
-    public function UpdateDeviceOperationDate($id)
-    {
-        $device = Device::findOrFail($id);
-        $device->DeviceStatusID = DeviceStatusEnum::INACTIVE_ID;
-        $device->OperationDate = Carbon::now();
-        $device->save();
-
-        LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Deployment', LogTypeEnum::INFO, auth()->id());
-
-        return redirect()->route('device.detail', $id)->with('status', 'Device deployed successfully');
+            return view('device-detail', compact('device', 'baseTime', 'deviceTimes', 'deviceTimeTransactions', 'totalTime', 'totalRate', 'rptDeviceTimeTransactions'));
+        } catch (\Exception $e) {
+            Log::error('Error fetching device details for DeviceID: ' . $id, ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to retrieve device details.'], 500);
+        }
     }
 
     public function InsertDeviceDetails(Request $request)
@@ -83,11 +79,11 @@ class DeviceMangementController extends Controller
             $device->DeviceStatusID = $validatedData['DeviceStatusID'];
             $device->save();
 
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Device registered', LogTypeEnum::INFO, auth()->id());
+            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Device ' . $device->ExternalDeviceName . ' registered.', LogTypeEnum::INFO, auth()->id());
 
             return response()->json(['success' => true, 'message' => 'Device registered successfully.', 'device_id' => $device->DeviceID], 201);
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error inserting device: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error inserting device: ' . $device->DeviceName, ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Failed to register device.', 'error' => $e->getMessage()], 500);
         }
     }
@@ -113,7 +109,7 @@ class DeviceMangementController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Device updated successfully.', 'device_id' => $device->DeviceID], 201);
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error updating device: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error updating device: ' . $device->DeviceID, ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Failed to update device.', 'error' => $e->getMessage()], 500);
         }
     }
@@ -123,6 +119,7 @@ class DeviceMangementController extends Controller
         $device = Device::find($id);
 
         if (!$device) {
+            Log::error('Device not found for deletion', ['DeviceID' => $id]);
             return response()->json(['success' => false, 'message' => 'Device not found.'], 404);
         }
 
@@ -133,14 +130,13 @@ class DeviceMangementController extends Controller
             $response = $client->delete("http://$deviceIpAddress/api/reset");
 
             if ($response->getStatusCode() == 200) {
-
-                LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Deleted device', LogTypeEnum::INFO, auth()->id());
+                LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Device ' . $device->ExternalDeviceName . ' deleted.', LogTypeEnum::INFO, auth()->id());
                 $device->delete();
                 return response()->json(['success' => true, 'message' => 'Device deleted successfully.']);
             }
             return response()->json(['success' => false, 'message' => 'Failed to reset the device.'], $response->getStatusCode());
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error deleting device: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error deleting device: ' . $device->DeviceID, ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
@@ -160,13 +156,11 @@ class DeviceMangementController extends Controller
             $response = $client->get("http://$deviceIpAddress/api/test");
 
             if ($response->getStatusCode() == 200) {
-
-                LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Tested device', LogTypeEnum::INFO, auth()->id());
                 return response()->json(['success' => true, 'message' => 'Device tested successfully.']);
             }
             return response()->json(['success' => false, 'message' => 'Failed to test the device.'], $response->getStatusCode());
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error testing device: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error fetching devices', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
@@ -189,14 +183,14 @@ class DeviceMangementController extends Controller
                 $device->DeviceStatusID = DeviceStatusEnum::DISABLED_ID;
                 $device->save();
 
-                LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Disabled device', LogTypeEnum::INFO, auth()->id());
+                LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Device ' . $device->ExternalDeviceName . ' disabled.', LogTypeEnum::INFO, auth()->id());
 
                 return response()->json(['success' => true, 'message' => 'Device disabled successfully']);
             }
 
             return response()->json(['success' => false, 'message' => 'Failed to disable the device'], $response->getStatusCode());
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error disabling device: ' . $e->getMessage(), LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error fetching devices', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
@@ -219,14 +213,14 @@ class DeviceMangementController extends Controller
                 $device->DeviceStatusID = DeviceStatusEnum::INACTIVE_ID;
                 $device->save();
 
-                LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Enabled device', LogTypeEnum::INFO, auth()->id());
+                LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Device ' . $device->ExternalDeviceName . ' enabled.', LogTypeEnum::INFO, auth()->id());
 
                 return response()->json(['success' => true, 'message' => 'Device enabled successfully']);
             }
 
             return response()->json(['success' => false, 'message' => 'Failed to enable the device'], $response->getStatusCode());
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error enabling device: ' . $e->getMessage(), LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error fetching devices', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
@@ -265,7 +259,7 @@ class DeviceMangementController extends Controller
             }
             return response()->json(['success' => false, 'message' => 'Failed to update the device name.'], $response->getStatusCode());
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error updating device name: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error fetching devices', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
@@ -302,7 +296,7 @@ class DeviceMangementController extends Controller
             }
             return response()->json(['success' => false, 'message' => 'Failed to update the device watchdog interval.'], $response->getStatusCode());
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error updating device watchdog interval: ' . $e->getMessage(), LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error fetching devices', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
@@ -327,7 +321,7 @@ class DeviceMangementController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Device remaining time notification updated successfully.']);
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error updating device remaining time notification: ' . $e->getMessage(), LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error fetching devices', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }

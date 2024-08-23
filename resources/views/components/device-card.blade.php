@@ -318,13 +318,12 @@ $increments = $device->increments;
                         updateUI(deviceId, new Date(data.startTime), new Date(data.endTime), data.totalTime, data.totalRate);
                     } else {
                         hideLoading();
-                        alert(data.error);
+                        showToast("An error occured. Please see logs for more info");
                     }
                 })
                 .catch(error => {
                     hideLoading();
-                    console.error('Error:', error);
-                    alert('An error occurred: ' + error.message);
+                    showToast("An error occured. Please see logs for more info");
                 });
             });
         }
@@ -387,13 +386,12 @@ $increments = $device->increments;
                         updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate);
                     }
                 } else {
-                    alert(data.error);
+                    showToast("An error occured. Please see logs for more info");
                 }
             })
             .catch(error => {
                 hideLoading();
-                console.error('Error:', error);
-                alert('An error occurred: ' + error.message);
+                showToast("An error occured. Please see logs for more info");
             });
         });
 
@@ -459,13 +457,12 @@ $increments = $device->increments;
                         updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate);
                     }
                 } else {
-                    alert(data.error);
+                    showToast("An error occured. Please see logs for more info");
                 }
             })
             .catch(error => {
                 hideLoading();
-                console.error('Error:', error);
-                alert('An error occurred: ' + error.message);
+                showToast("An error occured. Please see logs for more info");
             });
         });
 
@@ -505,13 +502,12 @@ $increments = $device->increments;
                             updateUI(deviceId, new Date(data.startTime), new Date(data.endTime), data.totalTime, data.totalRate);
                         } else {
                             hideLoading();
-                            alert(data.error);
+                            showToast("An error occured. Please see logs for more info");
                         }
                     })
                     .catch(error => {
                         hideLoading();
-                        console.error('Error:', error);
-                        alert('An error occurred: ' + error.message);
+                        showToast("An error occured. Please see logs for more info");
                     });
                 });
                 item.classList.add('event-attached');
@@ -560,12 +556,11 @@ $increments = $device->increments;
                     updateStatusRibbon(deviceId, 'Inactive');
                     updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate, true);
                 } else {
-                    alert(data.error);
+                    showToast("An error occured. Please see logs for more info");
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred: ' + error.message);
+                showToast("An error occured. Please see logs for more info");
             });
             hideLoading();
         });

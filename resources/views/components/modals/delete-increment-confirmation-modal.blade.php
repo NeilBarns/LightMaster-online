@@ -34,7 +34,7 @@
                         window.location.reload();
                     },
                     error: function(xhr, status, error) {
-                        alert('An error occurred while trying to delete the time increment.');
+                        showToast('An error occurred while trying to delete the time increment.');
                     }
                 });
             }

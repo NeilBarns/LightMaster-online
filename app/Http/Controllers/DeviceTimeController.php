@@ -13,6 +13,7 @@ use App\Enums\LogTypeEnum;
 use App\Enums\StoppageTypeEnum;
 use App\Enums\TimeTransactionTypeEnum;
 use App\Models\RptDeviceTimeTransactions;
+use Illuminate\Support\Facades\Log;
 
 class DeviceTimeController extends Controller
 {
@@ -24,25 +25,30 @@ class DeviceTimeController extends Controller
             'device_id' => 'required|integer|exists:Devices,DeviceID',
         ]);
 
-        $device = Device::findOrFail($request->device_id);
+        try {
+            $device = Device::findOrFail($request->device_id);
 
-        DeviceTime::create([
-            'DeviceID' => $request->device_id,
-            'Time' => $request->time,
-            'Rate' => $request->rate,
-            'TimeTypeID' => DeviceTime::TIME_TYPE_INCREMENT,
-            'Active' => true
-        ]);
+            DeviceTime::create([
+                'DeviceID' => $request->device_id,
+                'Time' => $request->time,
+                'Rate' => $request->rate,
+                'TimeTypeID' => DeviceTime::TIME_TYPE_INCREMENT,
+                'Active' => true
+            ]);
 
-        LoggingController::InsertLog(
-            LogEntityEnum::DEVICE_TIME,
-            $request->device_id,
-            'Added increment ' . $request->time . ' with rate ' . $request->rate .  ' for device: ' . $device->DeviceName,
-            LogTypeEnum::INFO,
-            auth()->id()
-        );
+            LoggingController::InsertLog(
+                LogEntityEnum::DEVICE_TIME,
+                $request->device_id,
+                'Added increment ' . $request->time . ' with rate ' . $request->rate .  ' for device: ' . $device->DeviceName,
+                LogTypeEnum::INFO,
+                auth()->id()
+            );
 
-        return redirect()->back()->with('success', 'Time increment added successfully.');
+            return redirect()->back()->with('success', 'Time increment added successfully.');
+        } catch (\Exception $e) {
+            Log::error('Error inserting device increment for DeviceID: ' . $request->device_id, ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to add time increment.', 'error' => $e->getMessage()], 500);
+        }
     }
 
     public function InsertDeviceBase(Request $request)
@@ -53,21 +59,20 @@ class DeviceTimeController extends Controller
             'device_id' => 'required|integer|exists:Devices,DeviceID',
         ]);
 
-        $device = Device::findOrFail($request->device_id);
-
-        // Check if a base time already exists for the device
-        $baseTime = DeviceTime::where('DeviceID', $request->device_id)
-            ->where('TimeTypeID', DeviceTime::TIME_TYPE_BASE)
-            ->first();
-
         try {
+            $device = Device::findOrFail($request->device_id);
+
+            // Check if a base time already exists for the device
+            $baseTime = DeviceTime::where('DeviceID', $request->device_id)
+                ->where('TimeTypeID', DeviceTime::TIME_TYPE_BASE)
+                ->first();
+
             if ($baseTime) {
                 // Update the existing base time
                 $baseTime->update([
                     'Time' => $request->base_time,
                     'Rate' => $request->base_rate,
                 ]);
-
 
                 LoggingController::InsertLog(
                     LogEntityEnum::DEVICE_TIME,
@@ -96,7 +101,8 @@ class DeviceTimeController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Base time and rate saved successfully.']);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], 500);
+            Log::error('Error inserting device base time for DeviceID: ' . $request->device_id, ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to insert base time and rate.', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -108,23 +114,28 @@ class DeviceTimeController extends Controller
             'device_id' => 'required|integer|exists:Devices,DeviceID',
         ]);
 
-        $device = Device::findOrFail($request->device_id);
-        $deviceTime = DeviceTime::findOrFail($id);
+        try {
+            $device = Device::findOrFail($request->device_id);
+            $deviceTime = DeviceTime::findOrFail($id);
 
-        LoggingController::InsertLog(
-            LogEntityEnum::DEVICE_TIME,
-            $id,
-            'Updated increment time ' . $deviceTime->Time . ' to ' . $request->time . ' and base rate ' . $deviceTime->Rate . ' to ' . $request->rate . ' for device: ' . $device->DeviceName,
-            LogTypeEnum::INFO,
-            auth()->id()
-        );
+            LoggingController::InsertLog(
+                LogEntityEnum::DEVICE_TIME,
+                $id,
+                'Updated increment time ' . $deviceTime->Time . ' to ' . $request->time . ' and base rate ' . $deviceTime->Rate . ' to ' . $request->rate . ' for device: ' . $device->DeviceName,
+                LogTypeEnum::INFO,
+                auth()->id()
+            );
 
-        $deviceTime->update([
-            'Time' => $request->time,
-            'Rate' => $request->rate,
-        ]);
+            $deviceTime->update([
+                'Time' => $request->time,
+                'Rate' => $request->rate,
+            ]);
 
-        return redirect()->back()->with('success', 'Time increment updated successfully.');
+            return redirect()->back()->with('success', 'Time increment updated successfully.');
+        } catch (\Exception $e) {
+            Log::error('Error updating device increment for DeviceID: ' . $request->device_id . ' and DeviceTimeID: ' . $id, ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to update time increment.', 'error' => $e->getMessage()], 500);
+        }
     }
 
     public function UpdateDeviceIncrementStatus(Request $request, $id)
@@ -145,28 +156,34 @@ class DeviceTimeController extends Controller
                 'Active' => $request->incrementStatus,
             ]);
 
-            return response()->json(['success' => true, 'message' => 'Time increment disabled successfully.']);
+            return response()->json(['success' => true, 'message' => 'Time increment status updated successfully.']);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], 500);
+            Log::error('Error updating device increment status for DeviceID: ' . $request->device_id . ' and DeviceTimeID: ' . $id, ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to update increment status.', 'error' => $e->getMessage()], 500);
         }
     }
 
     public function DeleteDeviceIncrement($id)
     {
-        $deviceTime = DeviceTime::findOrFail($id);
-        $device = Device::findOrFail($deviceTime->DeviceID);
+        try {
+            $deviceTime = DeviceTime::findOrFail($id);
+            $device = Device::findOrFail($deviceTime->DeviceID);
 
-        LoggingController::InsertLog(
-            LogEntityEnum::DEVICE_TIME,
-            $id,
-            'Deleted increment time ' . $deviceTime->Time . ' with rate ' . $deviceTime->Rate . ' for device: ' . $device->DeviceName,
-            LogTypeEnum::INFO,
-            auth()->id()
-        );
+            LoggingController::InsertLog(
+                LogEntityEnum::DEVICE_TIME,
+                $id,
+                'Deleted increment time ' . $deviceTime->Time . ' with rate ' . $deviceTime->Rate . ' for device: ' . $device->DeviceName,
+                LogTypeEnum::INFO,
+                auth()->id()
+            );
 
-        $deviceTime->delete();
+            $deviceTime->delete();
 
-        return response()->json(['success' => 'Time increment deleted successfully.']);
+            return response()->json(['success' => 'Time increment deleted successfully.']);
+        } catch (\Exception $e) {
+            Log::error('Error deleting device increment for DeviceTimeID: ' . $id, ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to delete time increment.', 'error' => $e->getMessage()], 500);
+        }
     }
 
     public function StartDeviceTime($id)
@@ -237,7 +254,7 @@ class DeviceTimeController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Failed to start time to the device.'], $response->getStatusCode());
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $id, 'Error starting device time: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error starting device time for device ' . $id, ['error' => $e->getMessage()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -296,7 +313,7 @@ class DeviceTimeController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Failed to reset the device.'], $response->getStatusCode());
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $id, 'Error ending device time: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error ending device time for device ' . $id, ['error' => $e->getMessage()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -362,7 +379,7 @@ class DeviceTimeController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Failed to extend time to the device.'], $response->getStatusCode());
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $id, 'Error extending device time: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error extending device time for device ' . $id, ['error' => $e->getMessage()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -419,7 +436,7 @@ class DeviceTimeController extends Controller
 
             return response()->json(['success' => 'Device time ended successfully.']);
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Error ending device time API: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error API ending device time for device ' . $device->DeviceID, ['error' => $e->getMessage()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -490,7 +507,7 @@ class DeviceTimeController extends Controller
             ]);
         } catch (\Exception $e) {
             // Log any errors
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $deviceId, 'Error pausing device: ' . $e->getMessage(), LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error API pausing device time for device ' . $device->DeviceID, ['error' => $e->getMessage()]);
             return response()->json(['error' => 'Error pausing device: ' . $e->getMessage()], 500);
         }
     }
@@ -564,7 +581,7 @@ class DeviceTimeController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Failed to pause time on the device.'], $response->getStatusCode());
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $id, 'Error pausing device time: ' . $e->getMessage(), LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error pausing device time for device ' . $id, ['error' => $e->getMessage()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -639,7 +656,7 @@ class DeviceTimeController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Failed to resume time on the device.'], $response->getStatusCode());
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $id, 'Error resuming device time: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error resuming device time for device ' . $id, ['error' => $e->getMessage()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -697,7 +714,7 @@ class DeviceTimeController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Failed to start time to the device.'], $response->getStatusCode());
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $id, 'Error starting device time: ' . $e, LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error starting free light for device ' . $id, ['error' => $e->getMessage()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -749,7 +766,7 @@ class DeviceTimeController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Failed to stop free light'], $response->getStatusCode());
         } catch (\Exception $e) {
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $id, 'Error stopping free light: ' . $e->getMessage(), LogTypeEnum::ERROR, auth()->id());
+            Log::error('Error stopping free light for device ' . $id, ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Failed to stop free light'], 500);
         }
     }

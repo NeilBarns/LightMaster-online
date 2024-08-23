@@ -166,9 +166,7 @@ class ReportsController extends Controller
 
             return response()->json($query, 200);
         } catch (\Exception $e) {
-            // Log the error for debugging
             Log::error('Error fetching transactions:', ['error' => $e->getMessage()]);
-
             return response()->json(['error' => 'Failed to fetch transactions'], 500);
         }
     }
