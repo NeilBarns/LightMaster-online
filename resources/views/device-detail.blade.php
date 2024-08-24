@@ -646,28 +646,36 @@ use App\Enums\PermissionsEnum;
             "July", "August", "September", "October", "November", "December"
         ];
 
-        const ctx = document.getElementById("rateChart").getContext("2d");
-        const chart = new Chart(ctx, getConfig("monthly"));
-        fetchChartData("monthly", deviceID);
-
-
-        document.getElementById("dailyButton").addEventListener("click", () => {
-            updateChartTitle("daily");
-            fetchChartData("daily", deviceID);
-            document.getElementById("dailyButton").classList.add("bg-blue-500", "text-white");
-            document.getElementById("monthlyButton").classList.remove("bg-blue-500", "text-white");
-            document.getElementById("dailyButton").classList.remove("bg-gray-200", "text-gray-800");
-            document.getElementById("monthlyButton").classList.add("bg-gray-200", "text-gray-800");
-        });
-
-        document.getElementById("monthlyButton").addEventListener("click", () => {
-            updateChartTitle("monthly");
+        const ctx = document.getElementById("rateChart");
+        
+        if (ctx)
+        {
+            ctx.getContext("2d");
+            const chart = new Chart(ctx, getConfig("monthly"));
             fetchChartData("monthly", deviceID);
-            document.getElementById("monthlyButton").classList.add("bg-blue-500", "text-white");
-            document.getElementById("dailyButton").classList.remove("bg-blue-500", "text-white");
-            document.getElementById("monthlyButton").classList.remove("bg-gray-200", "text-gray-800");
-            document.getElementById("dailyButton").classList.add("bg-gray-200", "text-gray-800");
-        });
+
+
+            document.getElementById("dailyButton").addEventListener("click", () => {
+                updateChartTitle("daily");
+                fetchChartData("daily", deviceID);
+                document.getElementById("dailyButton").classList.add("bg-blue-500", "text-white");
+                document.getElementById("monthlyButton").classList.remove("bg-blue-500", "text-white");
+                document.getElementById("dailyButton").classList.remove("bg-gray-200", "text-gray-800");
+                document.getElementById("monthlyButton").classList.add("bg-gray-200", "text-gray-800");
+            });
+
+            document.getElementById("monthlyButton").addEventListener("click", () => {
+                updateChartTitle("monthly");
+                fetchChartData("monthly", deviceID);
+                document.getElementById("monthlyButton").classList.add("bg-blue-500", "text-white");
+                document.getElementById("dailyButton").classList.remove("bg-blue-500", "text-white");
+                document.getElementById("monthlyButton").classList.remove("bg-gray-200", "text-gray-800");
+                document.getElementById("dailyButton").classList.add("bg-gray-200", "text-gray-800");
+            });
+        }
+        
+        
+        
 
         $('#btnTestLight').on('click', function() {
             var deviceId = $(this).data('id');
@@ -775,7 +783,12 @@ use App\Enums\PermissionsEnum;
         }
 
         var tableContainer = document.getElementById('deviceTblcontainer');
-        tableContainer.scrollTop = tableContainer.scrollHeight;
+
+        if (tableContainer)
+        {
+            tableContainer.scrollTop = tableContainer.scrollHeight;
+        }
+        
 
         function updateChartTitle(viewType) {
             const currentDate = new Date(); // Get the current date
@@ -953,37 +966,41 @@ use App\Enums\PermissionsEnum;
 
         const freeLightButton = document.getElementById('btnFreeLight');
         
-        freeLightButton.addEventListener('click', function() {
-            const action = this.textContent.trim().includes('Free') ? 'startFree' : 'stopFree';
+        if (freeLightButton)
+        {
+                freeLightButton.addEventListener('click', function() {
+                const action = this.textContent.trim().includes('Free') ? 'startFree' : 'stopFree';
 
-            if (action === 'startFree')
-            {
-                $(freeLightModal).modal('show');
-            }
-            else
-            {
-                showLoading();
-                fetch(`/device/${deviceID}/stopfree`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    hideLoading();
-                    if (data.success) {
-                        window.location.href = '/device';
-                    } else {
+                if (action === 'startFree')
+                {
+                    $(freeLightModal).modal('show');
+                }
+                else
+                {
+                    showLoading();
+                    fetch(`/device/${deviceID}/stopfree`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoading();
+                        if (data.success) {
+                            window.location.href = '/device';
+                        } else {
+                            showToast("An error occured. Please see logs for more info");
+                        }
+                    })
+                    .catch(error => {
+                        hideLoading();
                         showToast("An error occured. Please see logs for more info");
-                    }
-                })
-                .catch(error => {
-                    hideLoading();
-                    showToast("An error occured. Please see logs for more info");
-                });
-            }
-        });
+                    });
+                }
+            });
+        }
+        
 
         const deviceNameDisplay = document.getElementById('deviceNameDisplay');
         const editDeviceNameButton = document.getElementById('editDeviceNameButton');
@@ -991,12 +1008,16 @@ use App\Enums\PermissionsEnum;
         const deviceNameInput = document.getElementById('deviceNameInput');
         const saveDeviceNameButton = document.getElementById('saveDeviceNameButton');
 
-        editDeviceNameButton.addEventListener('click', function () {
-            deviceNameDisplay.style.display = 'none';
-            editDeviceNameButton.style.display = 'none';
-            editDeviceNameSection.classList.remove('!hidden');
-            deviceNameInput.focus();
-        });
+        if (editDeviceNameButton)
+        {
+            editDeviceNameButton.addEventListener('click', function () {
+                deviceNameDisplay.style.display = 'none';
+                editDeviceNameButton.style.display = 'none';
+                editDeviceNameSection.classList.remove('!hidden');
+                deviceNameInput.focus();
+            });
+        }
+        
 
         saveDeviceNameButton.addEventListener('click', function () {
             const newDeviceName = deviceNameInput.value.trim();

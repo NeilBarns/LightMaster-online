@@ -222,7 +222,7 @@ $increments = $device->increments;
             }
 
             function convertSecondsToTimeFormat(seconds) {
-                console.log('seconds', seconds);
+                
                 const hours = Math.floor(seconds / 3600);
                 const minutes = Math.floor((seconds % 3600) / 60);
                 const remainingSeconds = seconds % 60;
@@ -331,144 +331,145 @@ $increments = $device->increments;
             });
         }
 
+        if (startButton)
+        {
+            startButton.addEventListener('click', function () {
+                const deviceId = this.getAttribute('data-id');
+                const action = this.textContent.trim().includes('Start') ? 'start' : 'end';
 
-        startButton.addEventListener('click', function () {
-            const deviceId = this.getAttribute('data-id');
-            const action = this.textContent.trim().includes('Start') ? 'start' : 'end';
-
-            if (action === 'end') {
-                $(`#endTimeModal-${deviceId}`).modal('show');
-                return;
-            }
-
-            showLoading();
-
-            const route = action === 'start' ? `/device-time/start/${deviceId}` : `/device-time/end/${deviceId}`;
-            fetch(route, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                },
-                body: JSON.stringify({})
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.text().then(text => { throw new Error(text); });
+                if (action === 'end') {
+                    $(`#endTimeModal-${deviceId}`).modal('show');
+                    return;
                 }
-                return response.json();
-            })
-            .then(data => {
-                hideLoading();
-                if (data.success) {
-                    if (action === 'start') {
-                        fetchActiveTransactions(); location.reload();
-                        this.textContent = 'End time';
-                        this.classList.add('red');
-                        const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
-                        const extendButton = document.querySelector(`.extend-time-single-button[data-id="${deviceId}"]`);
-                        const pauseButton = document.querySelector(`.pause-time-button[data-id="${deviceId}"]`);
-                        console.log(extendButton);
-                        console.log(extendButtonMenu);
-                        console.log(pauseButton);
-                        if (extendButtonMenu) {
-                            extendButtonMenu.classList.remove('disabled');
-                        }
-                        if (extendButton) {
-                            extendButton.classList.remove('disabled');
-                            extendButton.removeAttribute('disabled'); 
-                        }
-                        if (pauseButton) {
-                            pauseButton.classList.remove('disabled');
-                            pauseButton.removeAttribute('disabled');
-                        }
 
-                        startButton.classList.add('red');
+                showLoading();
 
-                        updateStatusRibbon(deviceId, 'Running');
-                        updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate);
+                const route = action === 'start' ? `/device-time/start/${deviceId}` : `/device-time/end/${deviceId}`;
+                fetch(route, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { throw new Error(text); });
                     }
-                } else {
+                    return response.json();
+                })
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        if (action === 'start') {
+                            fetchActiveTransactions(); location.reload();
+                            this.textContent = 'End time';
+                            this.classList.add('red');
+                            const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
+                            const extendButton = document.querySelector(`.extend-time-single-button[data-id="${deviceId}"]`);
+                            const pauseButton = document.querySelector(`.pause-time-button[data-id="${deviceId}"]`);
+                           
+                            if (extendButtonMenu) {
+                                extendButtonMenu.classList.remove('disabled');
+                            }
+                            if (extendButton) {
+                                extendButton.classList.remove('disabled');
+                                extendButton.removeAttribute('disabled'); 
+                            }
+                            if (pauseButton) {
+                                pauseButton.classList.remove('disabled');
+                                pauseButton.removeAttribute('disabled');
+                            }
+
+                            startButton.classList.add('red');
+
+                            updateStatusRibbon(deviceId, 'Running');
+                            updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate);
+                        }
+                    } else {
+                        showToast("An error occured. Please see logs for more info");
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
                     showToast("An error occured. Please see logs for more info");
-                }
-            })
-            .catch(error => {
-                hideLoading();
-                showToast("An error occured. Please see logs for more info");
+                });
             });
-        });
+        }
 
-        pauseButton.addEventListener('click', function () {
-            const deviceId = this.getAttribute('data-id');
-            const action = this.textContent.trim().includes('Pause') ? 'pause' : 'continue';
+        if (pauseButton)
+        {
+            pauseButton.addEventListener('click', function () {
+                const deviceId = this.getAttribute('data-id');
+                const action = this.textContent.trim().includes('Pause') ? 'pause' : 'continue';
 
-            showLoading();
+                showLoading();
 
-            const route = action === 'pause' ? `/device-time/pause/${deviceId}` : `/device-time/resume/${deviceId}`;
+                const route = action === 'pause' ? `/device-time/pause/${deviceId}` : `/device-time/resume/${deviceId}`;
 
-            fetch(route, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                },
-                body: JSON.stringify({})
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.text().then(text => { throw new Error(text); });
-                }
-                return response.json();
-            })
-            .then(data => {
-                hideLoading();
-                if (data.success) {
-                    if (action === 'pause') {
-                        fetchActiveTransactions(); location.reload();
-                        this.textContent = 'Resume';
-                        this.classList.add('green');
-                        const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
-                        const extendButton = document.querySelector(`.extend-time-single-button[data-id="${deviceId}"]`);
-                        const startButton = document.querySelector(`.start-time-button[data-id="${deviceId}"]`);
-                        console.log(extendButton);
-                        console.log(extendButtonMenu);
-                        console.log(pauseButton);
-                        if (extendButtonMenu) {
-                            extendButtonMenu.classList.add('disabled');
-                        }
-                        if (extendButton) {
-                            extendButton.classList.add('disabled');
-                        }
-                        updateStatusRibbon(deviceId, 'Paused: ' + convertSecondsToTimeFormat(data.remaining_time));
+                fetch(route, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { throw new Error(text); });
                     }
-                    else {
-                        fetchActiveTransactions(); location.reload();
-                        this.textContent = 'Pause time';
-                        this.classList.remove('green');
-                        const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
-                        const extendButton = document.querySelector(`.extend-time-single-button[data-id="${deviceId}"]`);
-                        const startButton = document.querySelector(`.start-time-button[data-id="${deviceId}"]`);
+                    return response.json();
+                })
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        if (action === 'pause') {
+                            fetchActiveTransactions(); location.reload();
+                            this.textContent = 'Resume';
+                            this.classList.add('green');
+                            const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
+                            const extendButton = document.querySelector(`.extend-time-single-button[data-id="${deviceId}"]`);
+                            const startButton = document.querySelector(`.start-time-button[data-id="${deviceId}"]`);
 
-                        if (extendButtonMenu) {
-                            extendButtonMenu.classList.remove('disabled');
+                            if (extendButtonMenu) {
+                                extendButtonMenu.classList.add('disabled');
+                            }
+                            if (extendButton) {
+                                extendButton.classList.add('disabled');
+                            }
+                            updateStatusRibbon(deviceId, 'Paused: ' + convertSecondsToTimeFormat(data.remaining_time));
                         }
-                        if (extendButton) {
-                            extendButton.classList.remove('disabled');
-                        }
+                        else {
+                            fetchActiveTransactions(); location.reload();
+                            this.textContent = 'Pause time';
+                            this.classList.remove('green');
+                            const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
+                            const extendButton = document.querySelector(`.extend-time-single-button[data-id="${deviceId}"]`);
+                            const startButton = document.querySelector(`.start-time-button[data-id="${deviceId}"]`);
 
-                        updateStatusRibbon(deviceId, 'Running');
-                        updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate);
+                            if (extendButtonMenu) {
+                                extendButtonMenu.classList.remove('disabled');
+                            }
+                            if (extendButton) {
+                                extendButton.classList.remove('disabled');
+                            }
+
+                            updateStatusRibbon(deviceId, 'Running');
+                            updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate);
+                        }
+                    } else {
+                        showToast("An error occured. Please see logs for more info");
                     }
-                } else {
+                })
+                .catch(error => {
+                    hideLoading();
                     showToast("An error occured. Please see logs for more info");
-                }
-            })
-            .catch(error => {
-                hideLoading();
-                showToast("An error occured. Please see logs for more info");
+                });
             });
-        });
-
+        }
+        
         const extendItems = document.querySelectorAll('.dropdown .item');
         extendItems.forEach(item => {
             if (!item.classList.contains('event-attached')) {
@@ -478,7 +479,7 @@ $increments = $device->increments;
                     const increment = this.getAttribute('data-value');
                     const rate = this.getAttribute('data-rate');
                     showLoading();
-                    console.log(`Clicked on ${increment} minutes with rate ${rate}`);
+                    
                     const route = `/device-time/extend/${deviceId}`;
                     fetch(route, {
                         method: 'POST',
@@ -545,7 +546,7 @@ $increments = $device->increments;
                     const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
                     const extendButton = document.querySelector(`.extend-time-single-button[data-id="${deviceId}"]`);
                     const pauseButton = document.querySelector(`.pause-time-button[data-id="${deviceId}"]`);
-                    console.log(extendButton);
+                    
                     if (extendButtonMenu) {
                         extendButtonMenu.classList.add('disabled');
                     }

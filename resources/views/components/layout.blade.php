@@ -195,14 +195,14 @@
             let pollingTimeout;
 
             function fetchActiveTransactions() {
-                console.log('Fetching active transactions...');
+                // console.log('Fetching active transactions...');
                 fetch('/active-transactions')
                     .then(response => response.json())
                     .then(data => {
-                        console.log('Fetched data:', data);
+                        // console.log('Fetched data:', data);
 
                         const processedData = processDeviceTransactions(data);
-                        console.log('Processed Data:', processedData);
+                        // console.log('Processed Data:', processedData);
 
                         // If there are running timers, adjust the polling interval to the shortest interval.
                         // Otherwise, set the polling interval to the minimum interval.
@@ -267,7 +267,7 @@
                     pollingInterval = MIN_POLLING_INTERVAL;
                 }
 
-                console.log(`Final polling interval set to: ${pollingInterval} ms`);
+                // console.log(`Final polling interval set to: ${pollingInterval} ms`);
 
                 // Clear the current timeout
                 if (pollingTimeout) {

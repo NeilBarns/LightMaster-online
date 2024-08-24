@@ -147,7 +147,7 @@ $randomGreeting = $greetings[array_rand($greetings)];
         const deviceSync = document.getElementById(`device-sync-${deviceId}`);
         const deviceCard = document.getElementById(`device-card-${deviceId}`);
         let deviceRemTimeNotif = deviceCard.getAttribute('data-remainingTimeNotif');
-        console.log(deviceRemTimeNotif);
+        
         function startCountdown(remainingTime, timerElement, deviceId) {
             let interval = setInterval(function() {
                 if (remainingTime > 0) {
