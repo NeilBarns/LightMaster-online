@@ -64,8 +64,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/device-time/increment/status/{id}', [DeviceTimeController::class, 'UpdateDeviceIncrementStatus'])->name('device-time.increment.status');
 
     Route::post('/device-time/base', [DeviceTimeController::class, 'InsertDeviceBase'])->name('device-time.base');
-    Route::post('/device-time/start/{id}', [DeviceTimeController::class, 'StartDeviceTime'])->name('device-time.start');
-    Route::post('/device-time/end/{id}', [DeviceTimeController::class, 'EndDeviceTime'])->name('device-time.end');
+    Route::post('/device-time/open', [DeviceTimeController::class, 'InsertDeviceOpen'])->name('device-time.open');
+    Route::post('/device-time/start/rated/{id}', [DeviceTimeController::class, 'StartDeviceRatedTime'])->name('device-time.start.rated');
+    Route::post('/device-time/start/open/{id}', [DeviceTimeController::class, 'StartDeviceOpenTime'])->name('device-time.start.open');
+    Route::get('/device-time/end/{id}', [DeviceTimeController::class, 'EndDeviceTime'])->name('device-time.end');
     Route::post('/device-time/pause/{id}', [DeviceTimeController::class, 'PauseDeviceTime'])->name('device-time.pause');
     Route::post('/device-time/resume/{id}', [DeviceTimeController::class, 'ResumeDeviceTime'])->name('device-time.resume');
     Route::post('/device-time/extend/{id}', [DeviceTimeController::class, 'ExtendDeviceTime'])->name('device-time.extend');
@@ -101,7 +103,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports/finance', [ReportsController::class, 'GetFinanceReports'])->name('reports.finance');
     Route::get('/reports/device/usage/daily/{id}', [ReportsController::class, 'GetDailyUsage']);
     Route::get('/reports/device/usage/monthly/{id}', [ReportsController::class, 'GetMonthlyUsage']);
-    Route::get('/reports/transactions/filter', [ReportsController::class, 'GetFilteredTransactions'])->name('reports.transactions.filter');
+    Route::get('/reports/transactions/filter', [ReportsController::class, 'GetFilteredDetailedTransactions'])->name('reports.transactions.filter');
+    Route::get('/reports/transactions/filter/overview', [ReportsController::class, 'GetFilteredOverviewTransactions'])->name('reports.transactions.filter.overview');
     Route::get('/activity-logs', [LoggingController::class, 'GetActivityLogs'])->name('activity.logs');
 
 

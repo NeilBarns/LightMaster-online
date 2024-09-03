@@ -18,6 +18,7 @@ class TimeTypeSeeder extends Seeder
         DB::table('TimeType')->insert([
             ['TimeTypeID' => 1, 'Name' => 'BASE'],
             ['TimeTypeID' => 2, 'Name' => 'INCREMENT'],
+            ['TimeTypeID' => 3, 'Name' => 'OPEN'],
         ]);
     }
 }

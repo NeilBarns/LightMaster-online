@@ -44,6 +44,7 @@ class DeviceMangementController extends Controller
         try {
             $device = Device::with('deviceStatus')->findOrFail($id);
             $baseTime = DeviceTime::where('DeviceID', $id)->where('TimeTypeID', DeviceTime::TIME_TYPE_BASE)->first();
+            $openTime = DeviceTime::where('DeviceID', $id)->where('TimeTypeID', DeviceTime::TIME_TYPE_OPEN)->first();
             $deviceTimes = DeviceTime::where('DeviceID', $id)->where('TimeTypeID', DeviceTime::TIME_TYPE_INCREMENT)->get();
 
             $deviceTimeTransactions = DeviceTimeTransactions::where('DeviceID', $id)->where('Active', true)->get();
@@ -51,12 +52,13 @@ class DeviceMangementController extends Controller
             $totalTime = $deviceTimeTransactions->sum('Duration');
             $totalRate = $deviceTimeTransactions->sum('Rate');
 
-            $rptDeviceTimeTransactions = RptDeviceTimeTransactions::where('DeviceID', $id)
-                ->whereDate('Time', Carbon::now())
-                ->with('creator')
+            $rptDeviceTimeTransactions = RptDeviceTimeTransactions::whereDate('Time', '>=', Carbon::today()->subDays(1))
+                ->whereDate('Time', '<=', Carbon::today())
+                ->where('DeviceID', $id)
+                ->with('creator', 'device') // Make sure 'device' is loaded
                 ->get();
 
-            return view('device-detail', compact('device', 'baseTime', 'deviceTimes', 'deviceTimeTransactions', 'totalTime', 'totalRate', 'rptDeviceTimeTransactions'));
+            return view('device-detail', compact('device', 'baseTime', 'openTime', 'deviceTimes', 'deviceTimeTransactions', 'totalTime', 'totalRate', 'rptDeviceTimeTransactions'));
         } catch (\Exception $e) {
             Log::error('Error fetching device details for DeviceID: ' . $id, ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Failed to retrieve device details.'], 500);
@@ -70,7 +72,7 @@ class DeviceMangementController extends Controller
         $device->OperationDate = Carbon::now();
         $device->save();
 
-        LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Deployment', LogTypeEnum::INFO, auth()->id());
+        LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, $device->DeviceName . ': Deployment', LogTypeEnum::INFO, auth()->id());
 
         return redirect()->route('device.detail', $id)->with('status', 'Device deployed successfully');
     }
@@ -119,7 +121,7 @@ class DeviceMangementController extends Controller
             $device->IPAddress = $validatedData['IPAddress'];
             $device->save();
 
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Device info update through AP', LogTypeEnum::INFO, null);
+            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, $device->DeviceName . ': Device info update through AP', LogTypeEnum::INFO, null);
 
             return response()->json(['success' => true, 'message' => 'Device updated successfully.', 'device_id' => $device->DeviceID], 201);
         } catch (\Exception $e) {
@@ -304,7 +306,7 @@ class DeviceMangementController extends Controller
                 $device->WatchdogInterval = $newWatchdogInterval;
                 $device->save();
 
-                LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Changed device watchdog interval from ' . $originalWatchdogInterval . ' to ' . $newWatchdogInterval, LogTypeEnum::INFO, auth()->id());
+                LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, $device->DeviceName . ': Changed device watchdog interval from ' . $originalWatchdogInterval . ' to ' . $newWatchdogInterval, LogTypeEnum::INFO, auth()->id());
 
                 return response()->json(['success' => true, 'message' => 'Device watchdog interval updated successfully.']);
             }
@@ -331,7 +333,7 @@ class DeviceMangementController extends Controller
             $device->RemainingTimeNotification = $newRemainingTime;
             $device->save();
 
-            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Changed device remaining time notification from ' . $originalRemainingTime . ' to ' . $newRemainingTime, LogTypeEnum::INFO, auth()->id());
+            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, $device->DeviceName . ': Changed device remaining time notification from ' . $originalRemainingTime . ' to ' . $newRemainingTime, LogTypeEnum::INFO, auth()->id());
 
             return response()->json(['success' => true, 'message' => 'Device remaining time notification updated successfully.']);
         } catch (\Exception $e) {

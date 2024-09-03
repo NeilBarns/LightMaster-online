@@ -1,5 +1,14 @@
-@props(['device', 'baseTime', 'increments', 'totalTime', 'totalRate', 'startTime', 'endTime', 'remainingTime',
-'remTimeNotif'])
+@props(['device',
+'baseTime',
+'openTime',
+'increments',
+'totalTime',
+'totalRate',
+'startTime',
+'endTime',
+'remainingTime',
+'remTimeNotif',
+'isOpenTime'])
 
 @php
 use App\Enums\DeviceStatusEnum;
@@ -44,7 +53,7 @@ break;
 $increments = $device->increments;
 @endphp
 
-<div id="device-card-{{ $device->DeviceID }}" class="ui card !h-[350px] !w-[300px] !mr-6"
+<div id="device-card-{{ $device->DeviceID }}" class="ui card !h-[350px] !w-[330px] !mr-6"
     data-device-id="{{ $device->DeviceID }}" data-remaining-time="{{ $remainingTime }}"
     data-remainingTimeNotif="{{ $device->RemainingTimeNotification }}">
     <div id="device-sync-{{ $device->DeviceID }}"
@@ -89,17 +98,25 @@ $increments = $device->increments;
             @endif
 
             @if ($isRunning || $isPaused)
+            @if ($isOpenTime)
+            <p id="lblEndTime-{{ $device->DeviceID }}" class="font-bold">End time: ∞</p>
+            @else
             <p id="lblEndTime-{{ $device->DeviceID }}">End time: {{ $endTime ?
                 convertTo12HourFormat(\Carbon\Carbon::parse($endTime)->format('H:i:s'))
                 : 'N/A'
                 }}</p>
+            @endif
             @else
             <p id="lblEndTime-{{ $device->DeviceID }}">End time: --:--:--</p>
             @endif
 
             @if ($isRunning || $isPaused)
+            @if ($isOpenTime)
+            <p id="lblTotalTime-{{ $device->DeviceID }}" class="font-bold">Total time: ∞</p>
+            @else
             <p id="lblTotalTime-{{ $device->DeviceID }}">Total time: {{ convertMinutesToHoursAndMinutes($totalTime) }}
             </p>
+            @endif
             @else
             <p id="lblTotalTime-{{ $device->DeviceID }}">Total time: 0 hr 0 mins
             </p>
@@ -115,7 +132,9 @@ $increments = $device->increments;
 
             <div class="remaining-time-container" data-device-id="{{ $device->DeviceID }}"
                 data-remaining-time="{{ $remainingTime }}"
-                data-device-status="{{ strtolower($device->deviceStatus->Status) }}">
+                data-device-status="{{ strtolower($device->deviceStatus->Status) }}" data-isOpenTime="{{ $isOpenTime }}"
+                data-openTime="{{ $openTime ? $openTime->Time : 0}}"
+                data-openRate="{{ $openTime ? $openTime->Rate : 0}}">
                 <p class="remaining-time">Remaining time: {{ gmdate('H:i:s', $remainingTime) }}</p>
             </div>
 
@@ -126,16 +145,28 @@ $increments = $device->increments;
             <div class="row">
                 <div class="column">
                     @can([PermissionsEnum::CAN_CONTROL_DEVICE_TIME, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
-                    <button class="ui fluid small button start-time-button {{ ($isRunning || $isPaused) ? 'red' : '' }}"
-                        data-id="{{ $device->DeviceID }}"
-                        data-rate="{{ $baseTime ? convertMinutesToHoursAndMinutes($baseTime->Time) : " 0" }}" {{
-                        ($isDisabled || $isFree) ? 'disabled' : '' }}>
-                        @if($isRunning || $isPaused)
+                    <button id="btnEndTime"
+                        class="ui fluid small button start-time-button red {{ ($isRunning || $isPaused) ? '!block' : '!hidden' }}"
+                        data-id="{{ $device->DeviceID }}" {{ ($isDisabled || $isFree) ? 'disabled' : '' }}>
                         End time
-                        @else
-                        Start {{ $baseTime ? convertMinutesToHoursAndMinutes($baseTime->Time) : "Time" }}
-                        @endif
                     </button>
+                    <div id="startItems"
+                        class="ui small floating dropdown labeled icon button {{
+                        ($isDisabled || $isFree) ? 'disabled' : '' }} {{ ($isRunning || $isPaused) ? '!hidden' : '!block' }}"
+                        data-id="{{ $device->DeviceID }}">
+                        <i class="dropdown icon"></i>
+                        Start Time
+                        <div class="menu">
+                            <div class="item" data-type="open" data-value="{{ $openTime ? $openTime->Time : 0 }}"
+                                data-rate="{{ $openTime ? $openTime->Rate : 0 }}">
+                                Open time
+                            </div>
+                            <div class="item" data-type="rated" data-value="{{ $baseTime ? $baseTime->Time : 0 }}"
+                                data-rate="{{ $baseTime ? $baseTime->Rate : 0 }}">
+                                Start {{ $baseTime ? convertMinutesToHoursAndMinutes($baseTime->Time) : "Time" }}
+                            </div>
+                        </div>
+                    </div>
                     @endcan
                 </div>
                 <div class="column">
@@ -144,6 +175,14 @@ $increments = $device->increments;
                     $buttonClass = 'ui fluid small button pause-time-button';
                     $buttonText = 'Pause time';
                     $isButtonDisabled = ($isDisabled || $isInactive);
+
+                    if ($isOpenTime && $isPaused)
+                    {
+                    $isButtonDisabled = false;
+                    }
+                    else if ($isOpenTime && !$isPaused) {
+                    $isButtonDisabled = true;
+                    }
 
                     if (!$isButtonDisabled && $isPaused) {
                     $buttonClass .= ' green';
@@ -164,10 +203,11 @@ $increments = $device->increments;
                 @if ($increments->count() == 1)
                 <button data-id="{{ $device->DeviceID }}" data-time="{{ $increments->first()->Time }}"
                     data-rate="{{ $increments->first()->Rate }}" class="ui small button extend-time-single-button" {{
-                    ($isDisabled || !$isRunning) ? 'disabled' : '' }}>Extend {{
+                    ($isDisabled || !$isRunning || $isOpenTime) ? 'disabled' : '' }}>Extend {{
                     convertMinutesToHoursAndMinutes($increments->first()->Time) }}</button>
                 @elseif ($increments->count() > 1)
-                <div class="ui small floating dropdown labeled icon button {{ ($isDisabled || !$isRunning) ? 'disabled' : '' }}"
+                <div id="extendItems"
+                    class="ui small floating dropdown labeled icon button {{ ($isDisabled || !$isRunning || $isOpenTime) ? 'disabled' : '' }}"
                     data-id="{{ $device->DeviceID }}">
                     <i class="dropdown icon"></i>
                     Extend Time
@@ -191,6 +231,8 @@ $increments = $device->increments;
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const startButton = document.querySelector('.start-time-button[data-id="{{ $device->DeviceID }}"]');
+        const startTimeCollection = document.getElementById('startItems');
+        const endButton = document.getElementById('btnEndTime');
         const pauseButton = document.querySelector('.pause-time-button[data-id="{{ $device->DeviceID }}"]');
         const singleExtendButton = document.querySelector('.extend-time-single-button[data-id="{{ $device->DeviceID }}"]');
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -306,6 +348,7 @@ $increments = $device->increments;
                 })
                 .then(response => {
                     if (!response.ok) {
+                        showToast("Error on device response. Please see logs for more info", 'error');
                         return response.text().then(text => { throw new Error(text); });
                     }
                     return response.json();
@@ -321,13 +364,22 @@ $increments = $device->increments;
                         }, 1000);
                     } else {
                         hideLoading();
-                        showToast("An error occured. Please see logs for more info");
+                        showToast("Error on device response. Please see logs for more info", 'error');
                     }
                 })
                 .catch(error => {
                     hideLoading();
-                    showToast("An error occured. Please see logs for more info");
+                    showToast("Possible network error occured. Please see logs for more info", 'error');
                 });
+            });
+        }
+
+        if (endButton)
+        {
+            endButton.addEventListener('click', function () {
+                const deviceId = this.getAttribute('data-id');
+                $(`#endTimeModal-${deviceId}`).modal('show');
+                    return;
             });
         }
 
@@ -346,15 +398,15 @@ $increments = $device->increments;
 
                 const route = action === 'start' ? `/device-time/start/${deviceId}` : `/device-time/end/${deviceId}`;
                 fetch(route, {
-                    method: 'POST',
+                    method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': csrfToken,
-                    },
-                    body: JSON.stringify({})
+                    }
                 })
                 .then(response => {
                     if (!response.ok) {
+                        showToast("Error on device response. Please see logs for more info", 'error');
                         return response.text().then(text => { throw new Error(text); });
                     }
                     return response.json();
@@ -388,15 +440,147 @@ $increments = $device->increments;
                             updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate);
                         }
                     } else {
-                        showToast("An error occured. Please see logs for more info");
+                        showToast("Error on device response. Please see logs for more info", 'error');
                     }
                 })
                 .catch(error => {
                     hideLoading();
-                    showToast("An error occured. Please see logs for more info");
+                    showToast("Possible network error occured. Please see logs for more info", 'error');
                 });
             });
         }
+
+        const startItems = document.querySelectorAll('#startItems .item');
+
+        startItems.forEach(item => {
+            if (!item.classList.contains('event-attached')) {
+                
+                item.addEventListener('click', function () {
+                    
+                    const deviceId = this.closest('.dropdown').getAttribute('data-id');
+                    const timingType = this.getAttribute('data-type');
+                    const baseTime = this.getAttribute('data-value');
+                    const baseRate = this.getAttribute('data-rate');
+
+                    showLoading();
+
+                    if (timingType === 'rated')
+                    {
+                        const route = `/device-time/start/rated/${deviceId}`;
+                        fetch(route, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                            body: JSON.stringify({})
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                showToast("Error on device response. Please see logs for more info", 'error');
+                                return response.text().then(text => { throw new Error(text); });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            hideLoading();
+                            if (data.success) {
+                                fetchActiveTransactions(); location.reload();
+
+                                if (endButton)
+                                {
+                                    endButton.classList.remove('!hidden');
+                                    endButton.classList.add('!block');
+                                }
+
+                                startTimeCollection.classList.add('!hidden');
+                                startTimeCollection.classList.remove('!block');
+
+                                const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
+                                const extendButton = document.querySelector(`.extend-time-single-button[data-id="${deviceId}"]`);
+                                const pauseButton = document.querySelector(`.pause-time-button[data-id="${deviceId}"]`);
+
+                                if (extendButtonMenu) {
+                                    extendButtonMenu.classList.remove('disabled');
+                                }
+                                if (extendButton) {
+                                    extendButton.classList.remove('disabled');
+                                    extendButton.removeAttribute('disabled'); 
+                                }
+                                if (pauseButton) {
+                                    pauseButton.classList.remove('disabled');
+                                    pauseButton.removeAttribute('disabled');
+                                }
+
+                                updateStatusRibbon(deviceId, 'Running');
+                                updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate);
+                            } else {
+                                showToast("Error on device response. Please see logs for more info", 'error');
+                            }
+                        })
+                        .catch(error => {
+                            hideLoading();
+                            showToast("Possible network error occured. Please see logs for more info", 'error');
+                        });
+                    }
+                    else 
+                    {
+                        const route = `/device-time/start/open/${deviceId}`;
+                        fetch(route, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                            body: JSON.stringify({})
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                showToast("Error on device response. Please see logs for more info", 'error');
+                                return response.text().then(text => { throw new Error(text); });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            hideLoading();
+                            if (data.success) {
+                                fetchActiveTransactions(); location.reload();
+
+                                if (endButton)
+                                {
+                                    endButton.classList.remove('!hidden');
+                                    endButton.classList.add('!block');
+                                }
+
+                                startTimeCollection.classList.add('!hidden');
+                                startTimeCollection.classList.remove('!block');
+
+                                const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
+                                const extendButton = document.querySelector(`.extend-time-single-button[data-id="${deviceId}"]`);
+
+                                if (extendButtonMenu) {
+                                    extendButtonMenu.classList.remove('disabled');
+                                }
+                                if (extendButton) {
+                                    extendButton.classList.remove('disabled');
+                                    extendButton.removeAttribute('disabled'); 
+                                }
+                               
+                                updateStatusRibbon(deviceId, 'Running');
+                                updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate);
+                            } else {
+                                showToast("Error on device response. Please see logs for more info", 'error');
+                            }
+                        })
+                        .catch(error => {
+                            hideLoading();
+                            showToast("Possible network error occured. Please see logs for more info", 'error');
+                        });
+                    }
+                });
+                item.classList.add('event-attached');
+            }
+        });
 
         if (pauseButton)
         {
@@ -418,6 +602,7 @@ $increments = $device->increments;
                 })
                 .then(response => {
                     if (!response.ok) {
+                        showToast("Error on device response. Please see logs for more info", 'error');
                         return response.text().then(text => { throw new Error(text); });
                     }
                     return response.json();
@@ -460,17 +645,18 @@ $increments = $device->increments;
                             updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate);
                         }
                     } else {
-                        showToast("An error occured. Please see logs for more info");
+                        showToast("Error on device response. Please see logs for more info", 'error');
                     }
                 })
                 .catch(error => {
                     hideLoading();
-                    showToast("An error occured. Please see logs for more info");
+                    showToast("Possible network error occured. Please see logs for more info", 'error');
                 });
             });
         }
         
-        const extendItems = document.querySelectorAll('.dropdown .item');
+        const extendItems = document.querySelectorAll('#extendItems .item');
+        
         extendItems.forEach(item => {
             if (!item.classList.contains('event-attached')) {
                 item.addEventListener('click', function () {
@@ -494,6 +680,7 @@ $increments = $device->increments;
                     })
                     .then(response => {
                         if (!response.ok) {
+                            showToast("Error on device response. Please see logs for more info", 'error');
                             return response.text().then(text => { throw new Error(text); });
                         }
                         return response.json();
@@ -509,12 +696,12 @@ $increments = $device->increments;
                         }, 1000);
                         } else {
                             hideLoading();
-                            showToast("An error occured. Please see logs for more info");
+                            showToast("Error on device response. Please see logs for more info", 'error');
                         }
                     })
                     .catch(error => {
                         hideLoading();
-                        showToast("An error occured. Please see logs for more info");
+                        showToast("Possible network error occured. Please see logs for more info", 'error');
                     });
                 });
                 item.classList.add('event-attached');
@@ -527,12 +714,11 @@ $increments = $device->increments;
             const route = `/device-time/end/${deviceId}`;
             showLoading();
             fetch(route, {
-                method: 'POST',
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken,
-                },
-                body: JSON.stringify({})
+                }
             })
             .then(response => response.json())
             .then(data => {
@@ -541,8 +727,6 @@ $increments = $device->increments;
                     $(`#endTimeModal-${deviceId}`).modal('hide');
                     const startButton = document.querySelector(`.start-time-button[data-id="${deviceId}"]`);
                     const baseRate = startButton.getAttribute('data-rate');
-                    startButton.textContent = 'Start ' + baseRate;
-                    startButton.classList.remove('red');
                     const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
                     const extendButton = document.querySelector(`.extend-time-single-button[data-id="${deviceId}"]`);
                     const pauseButton = document.querySelector(`.pause-time-button[data-id="${deviceId}"]`);
@@ -561,13 +745,13 @@ $increments = $device->increments;
                         pauseButton.textContent = 'Pause time';
                     }
                     updateStatusRibbon(deviceId, 'Inactive');
-                    updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate, true);
+                    //updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate, true);
                 } else {
-                    showToast("An error occured. Please see logs for more info");
+                    showToast("Error on device response. Please see logs for more info", 'error');
                 }
             })
             .catch(error => {
-                showToast("An error occured. Please see logs for more info");
+                showToast("Possible network error occured. Please see logs for more info", 'error');
             });
             hideLoading();
         });

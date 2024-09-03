@@ -69,37 +69,75 @@ $randomGreeting = $greetings[array_rand($greetings)];
         $startTime = 0;
         $endTime = null;
         $totalTime = 0; // Initialize totalTime
+        $isOpenTime = false;
+        $isPause = false;
+        $durationWhenPaused = 0;
+        $activeTransactions = null;
 
         // Fetch base time if applicable
         $baseTime = \App\Models\DeviceTime::where('DeviceID', $device->DeviceID)
         ->where('TimeTypeID', 1)
         ->first();
 
-        // Fetch active transactions for the device
+        $openTime = \App\Models\DeviceTime::where('DeviceID', $device->DeviceID)
+        ->where('TimeTypeID', 3)
+        ->first();
+
         $activeTransactions = \App\Models\DeviceTimeTransactions::where('DeviceID', $device->DeviceID)
         ->where('Active', true)
         ->whereIn('TransactionType', [\App\Enums\TimeTransactionTypeEnum::START,
-        \App\Enums\TimeTransactionTypeEnum::EXTEND])
+        \App\Enums\TimeTransactionTypeEnum::EXTEND,
+        \App\Enums\TimeTransactionTypeEnum::PAUSE])
         ->get();
 
+
         if ($activeTransactions->isNotEmpty()) {
-        $totalTime = $activeTransactions->sum('Duration');
+        $totalTime = $activeTransactions
+        ->reject(function ($transaction) {
+        return $transaction->TransactionType == \App\Enums\TimeTransactionTypeEnum::PAUSE;
+        })
+        ->sum('Duration') / 60;
         $totalRate = number_format($activeTransactions->sum('Rate'), 2);
 
         $startTransaction = $activeTransactions->where('TransactionType',
         \App\Enums\TimeTransactionTypeEnum::START)->first();
         $startTime = $startTransaction ? $startTransaction->StartTime : null;
 
+        $isOpenTime = $startTransaction->IsOpenTime;
+        $isPause = $activeTransactions->where('TransactionType',
+        \App\Enums\TimeTransactionTypeEnum::PAUSE)->first();
+
         // Calculate end time based on start time and total time
         if ($startTime) {
         $endTime = \Carbon\Carbon::parse($startTime)->addMinutes($totalTime);
         }
 
-        // Calculate the remaining time
+        if ($isOpenTime)
+        {
+        if ($isPause)
+        {
+        $remainingTime = $isPause->Duration;
+        }
+        else {
+        $remainingTime = $startTime->diffInSeconds(\Carbon\Carbon::now(), false);
+        }
+        }
+        else {
+        if ($isPause)
+        {
+        $remainingTime = $isPause->Duration;
+        }
+        else {
         if ($endTime) {
         $remainingTime = \Carbon\Carbon::now()->diffInSeconds($endTime, false); // Calculate remaining time in seconds
         $remainingTime = $remainingTime > 0 ? $remainingTime : 0; // Ensure it's not negative
+
         }
+        }
+        // Calculate the remaining time
+
+        }
+
         } else {
         $totalRate = 0; // Ensure totalRate is 0 if no transactions
         }
@@ -107,8 +145,9 @@ $randomGreeting = $greetings[array_rand($greetings)];
         $remTimeNotif = $device->RemainingTimeNotification;
 
         @endphp
-        <x-device-card :device="$device" :totalTime="$totalTime" :baseTime="$baseTime" :totalRate="$totalRate"
-            :startTime="$startTime" :endTime="$endTime" :remainingTime="$remainingTime" :remTimeNotif="$remTimeNotif" />
+        <x-device-card :device="$device" :totalTime="$totalTime" :baseTime="$baseTime" :openTime="$openTime"
+            :totalRate="$totalRate" :startTime="$startTime" :endTime="$endTime" :remainingTime="$remainingTime"
+            :remTimeNotif="$remTimeNotif" :isOpenTime="$isOpenTime" />
         @endforeach
 
     </div>
@@ -133,6 +172,9 @@ $randomGreeting = $greetings[array_rand($greetings)];
         const deviceId = card.getAttribute('data-device-id');
         let remainingTime = parseInt(card.getAttribute('data-remaining-time'));
         const deviceStatus = card.getAttribute('data-device-status'); // Get the device status
+        let openTime = card.getAttribute('data-isOpenTime');
+        let openTimeTime = card.getAttribute('data-openTime');
+        let openTimeRate = card.getAttribute('data-openRate');
 
         const timerElement = card.querySelector('.remaining-time');
 
@@ -148,34 +190,53 @@ $randomGreeting = $greetings[array_rand($greetings)];
         const deviceCard = document.getElementById(`device-card-${deviceId}`);
         let deviceRemTimeNotif = deviceCard.getAttribute('data-remainingTimeNotif');
         
-        function startCountdown(remainingTime, timerElement, deviceId) {
+        
+        function startCountdown(remainingTime, timerElement) {
             let interval = setInterval(function() {
-                if (remainingTime > 0) {
-                    remainingTime--;
-                    
-                    if (deviceRemTimeNotif !== null && deviceRemTimeNotif > 0)
+                if (openTime == 1)
+                {
+                    remainingTime++;
+                    const lblTotalRate = document.getElementById(`lblTotalRate-${deviceId}`);
+                        
+                    if ((remainingTime / 60) < openTimeTime)
                     {
-                        if (remainingTime <= deviceRemTimeNotif * 60)
-                        {
-                            deviceCard.classList.add('!bg-amber-200');   
-                            card.classList.add('!font-bold');
-                            card.classList.add('!text-xl');
-                        }
+                        
                     }
-
+                    else {
+                        let openTimeRunningRate = ((remainingTime / 60) / openTimeTime) * openTimeRate;
+                        lblTotalRate.textContent = "Total charge/rate: PHP " + parseInt(openTimeRunningRate) + ".00";
+                    }
+                    
                     updateTimer(timerElement, remainingTime);
-                } else {
-                    // Clear the interval once the countdown reaches 0
-                    clearInterval(interval);
-                    if (deviceSync) {
-                        deviceSync.classList.remove('!hidden');
-                        deviceSync.classList.add('!flex');
-                    }
+                }
+                else {
+                    if (remainingTime > 0) {
+                        remainingTime--;
+                        
+                        if (deviceRemTimeNotif !== null && deviceRemTimeNotif > 0)
+                        {
+                            if (remainingTime <= deviceRemTimeNotif * 60)
+                            {
+                                deviceCard.classList.add('!bg-amber-200');   
+                                card.classList.add('!font-bold');
+                                card.classList.add('!text-xl');
+                            }
+                        }
 
-                    // Optionally reload the page after 10 seconds
-                    setTimeout(() => {
-                        location.reload();
-                    }, 10000);
+                        updateTimer(timerElement, remainingTime);
+                    } else {
+                        // Clear the interval once the countdown reaches 0
+                        clearInterval(interval);
+                        if (deviceSync) {
+                            deviceSync.classList.remove('!hidden');
+                            deviceSync.classList.add('!flex');
+                        }
+
+                        // Optionally reload the page after 10 seconds
+                        setTimeout(() => {
+                            location.reload();
+                        }, 10000);
+                    }
                 }
             }, 1000);
 

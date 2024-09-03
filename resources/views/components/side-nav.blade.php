@@ -46,7 +46,7 @@ use App\Enums\PermissionsEnum;
                         @endcan
                         @can([PermissionsEnum::ALL_ACCESS_TO_REPORTS, PermissionsEnum::CAN_VIEW_FINANCIAL_REPORTS])
                         <li class="{{ Request::is('*finance*') ? 'active' : '' }}">
-                            <a href="/reports/finance">Financial Reports</a>
+                            <a href="/reports/finance">Action Reports</a>
                         </li>
                         @endcan
                     </ul>

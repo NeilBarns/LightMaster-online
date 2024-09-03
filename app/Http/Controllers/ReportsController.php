@@ -26,7 +26,7 @@ class ReportsController extends Controller
         $dailyUsage = RptDeviceTimeTransactions::where('DeviceID', $deviceID)
             ->where('TransactionType', TimeTransactionTypeEnum::END)
             ->whereMonth('Time', $currentMonth)
-            ->selectRaw('DAY(Time) as day, SUM(Duration) as totalDuration, SUM(Rate) as totalRate')
+            ->selectRaw('DAY(Time) as day, SUM(Duration) / 60 as totalDuration, SUM(Rate) as totalRate')
             ->groupBy('day')
             ->get();
         $data = $dailyUsage->mapWithKeys(function ($item) use ($currentMonthName) {
@@ -40,7 +40,7 @@ class ReportsController extends Controller
     {
         $monthlyUsage = RptDeviceTimeTransactions::where('DeviceID', $deviceID)
             ->where('TransactionType', TimeTransactionTypeEnum::END)
-            ->selectRaw('MONTH(Time) as month, SUM(Duration) as totalDuration, SUM(Rate) as totalRate')
+            ->selectRaw('MONTH(Time) as month, SUM(Duration) / 60 as totalDuration, SUM(Rate) as totalRate')
             ->groupBy('month')
             ->get();
 
@@ -67,7 +67,7 @@ class ReportsController extends Controller
             foreach ($device->deviceTimeTransactions as $transaction) {
                 $monthIndex = $transaction->month - 1; // Convert month to zero-indexed
                 $monthlyRates[$monthIndex] = $transaction->total_rate;
-                $monthlyUsage[$monthIndex] = $transaction->total_usage;
+                $monthlyUsage[$monthIndex] = $transaction->total_usage / 60;
             }
 
             return [
@@ -80,7 +80,8 @@ class ReportsController extends Controller
         // Fetch users for the "Triggered By" filter
         $users = Users::all(); // Adjust as necessary to match your user model
 
-        $rptDeviceTimeTransactions = RptDeviceTimeTransactions::whereDate('Time', Carbon::today())
+        $rptDeviceTimeTransactions = RptDeviceTimeTransactions::whereDate('Time', '>=', Carbon::today()->subDays(1))
+            ->whereDate('Time', '<=', Carbon::today())
             ->with('creator', 'device') // Make sure 'device' is loaded
             ->get();
 
@@ -106,7 +107,77 @@ class ReportsController extends Controller
             ->get();
     }
 
-    public function GetFilteredTransactions(Request $request)
+    public function GetFilteredOverviewTransactions(Request $request)
+    {
+        try {
+            // Retrieve filters from request
+            $startDate = $request->input('startDate');
+            $endDate = $request->input('endDate');
+            $deviceNames = $request->input('deviceNames', []);
+
+            // Ensure deviceNames are arrays
+            if (!is_array($deviceNames)) {
+                $deviceNames = explode(',', $deviceNames);
+            }
+
+            // Query to fetch transactions
+            $transactions = RptDeviceTimeTransactions::with(['device', 'creator'])
+                ->when($startDate, function ($query, $startDate) {
+                    return $query->whereDate('Time', '>=', $startDate);
+                })
+                ->when($endDate, function ($query, $endDate) {
+                    return $query->whereDate('Time', '<=', $endDate);
+                })
+                ->when($deviceNames, function ($query, $deviceNames) {
+                    return $query->whereHas('device', function ($query) use ($deviceNames) {
+                        $query->whereIn('ExternalDeviceName', $deviceNames);
+                    });
+                })
+                ->orderBy('DeviceID', 'asc') // Order by DeviceID first
+                ->orderBy('Time', 'asc') // Then order by Time to ensure proper session grouping
+                ->get();
+
+            // Group and consolidate transactions into sessions
+            $sessions = [];
+            $currentSessionId = null;
+
+            foreach ($transactions as $transaction) {
+                $deviceId = $transaction->DeviceID;
+
+                // Check if a new session should start
+                if ($transaction->TransactionType == 'Start' || !isset($sessions[$currentSessionId])) {
+                    $currentSessionId = $transaction->DeviceTimeTransactionsID;
+                    $sessions[$currentSessionId] = [
+                        'deviceName' => $transaction->device->ExternalDeviceName ?? 'N/A',
+                        'startTime' => $transaction->Time,
+                        'endTime' => null,
+                        'isOpenTime' => $transaction->IsOpenTime,
+                        'totalDuration' => $transaction->Duration,
+                        'totalRate' => $transaction->Rate,
+                        'transactions' => [$transaction],
+                    ];
+                } elseif ($transaction->TransactionType == 'Extend' && isset($sessions[$currentSessionId])) {
+                    $sessions[$currentSessionId]['totalDuration'] += $transaction->Duration;
+                    $sessions[$currentSessionId]['totalRate'] += $transaction->Rate;
+                    $sessions[$currentSessionId]['transactions'][] = $transaction;
+                } elseif ($transaction->TransactionType == 'End' && isset($sessions[$currentSessionId])) {
+                    $sessions[$currentSessionId]['endTime'] = $transaction->Time;
+                    $sessions[$currentSessionId]['transactions'][] = $transaction;
+                    $currentSessionId = null; // End the current session
+                }
+            }
+
+            // Convert sessions to array format for JSON response
+            $sessionsArray = array_values($sessions);
+            return response()->json(['sessions' => $sessionsArray], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching transactions:', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to fetch transactions'], 500);
+        }
+    }
+
+
+    public function GetFilteredDetailedTransactions(Request $request)
     {
         try {
             // Retrieve filters from request

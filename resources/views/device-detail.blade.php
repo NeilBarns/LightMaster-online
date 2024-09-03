@@ -250,6 +250,57 @@ use App\Enums\PermissionsEnum;
         <div class="ui divider"></div>
         <div class="row">
             <div class="column">
+                <h5 class="ui header">Open Time Configuration</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="column">
+                <form class="ui form" method="POST">
+                    @csrf
+                    <div class="ui three column stackable grid">
+                        <div class="four wide column">
+                            <div class="field">
+                                <label>Open time increment</label>
+                            </div>
+                            <div class="ui fluid small right labeled input">
+                                <input type="number" name="open_time" id="txt_open_time"
+                                    value="{{ $openTime ? $openTime->Time : '' }}" placeholder="60" required>
+                                <div class="ui basic label">
+                                    minutes
+                                </div>
+                            </div>
+                        </div>
+                        <div class="four wide column">
+                            <div class="field">
+                                <label>Open time increment rate</label>
+                            </div>
+                            <div class="ui fluid small right labeled input">
+                                <input type="number" step="0.01" name="open_time_rate" id="txt_open_time_rate"
+                                    value="{{ $openTime ? $openTime->Rate : '' }}" placeholder="30.00" required>
+                                <div class="ui basic label">
+                                    PHP
+                                </div>
+                            </div>
+                        </div>
+                        @can([PermissionsEnum::CAN_EDIT_DEVICE_BASE_TIME, PermissionsEnum::ALL_ACCESS_TO_DEVICE])
+                        <div class="three wide column">
+
+                            <div class="field">
+                                <label class="invisible">search</label>
+                            </div>
+                            <button id="saveOpenTime" type="button" class="ui fluid small blue button">Save</button>
+                        </div>
+                        @endcan
+
+                    </div>
+                    <input type="hidden" name="device_id" value="{{ $device->DeviceID }}">
+                </form>
+            </div>
+        </div>
+
+        <div class="ui divider"></div>
+        <div class="row">
+            <div class="column">
                 <h5 class="ui header">Time Increments</h5>
             </div>
         </div>
@@ -454,7 +505,6 @@ use App\Enums\PermissionsEnum;
                         class="px-4 py-2 bg-blue-500 text-white rounded-l text-sm hover:bg-blue-600 focus:outline-none">Monthly</button>
                     <button id="dailyButton"
                         class="px-4 py-2 bg-gray-200 text-gray-800 rounded-r text-sm hover:bg-gray-300 focus:outline-none">Daily</button>
-
                 </div>
 
                 <div class="text-center">
@@ -472,18 +522,32 @@ use App\Enums\PermissionsEnum;
         <div class="ui divider"></div>
         <div class="row">
             <div class="column">
-                <h5 class="ui header">Time Transactions for today ({{ \Carbon\Carbon::today()->format('F j, Y') }})
+                <h5 class="ui header">Time Transactions for {{ \Carbon\Carbon::today()->subDays(1)->format('F j, Y') }}
+                    to {{ \Carbon\Carbon::today()->format('F j, Y') }}
                 </h5>
             </div>
         </div>
 
         <div class="row">
             <div class="column">
+                <div class="flex space-x-1">
+                    <button id="overviewButton"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-l text-sm hover:bg-blue-600 focus:outline-none">Overview</button>
+                    <button id="detailedButton"
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-r text-sm hover:bg-gray-300 focus:outline-none">Detailed</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tblDetailed" class="row !hidden">
+            <div class="column">
                 <div id="deviceTblcontainer" class="ui celled table-container max-h-[500px] overflow-y-auto">
                     <table class="ui celled table w-full">
                         <thead class="sticky top-0 bg-white">
                             <tr>
+                                <th class="px-4 py-2">Device</th>
                                 <th class="px-4 py-2">Transaction</th>
+                                <th class="px-4 py-2">Open time?</th>
                                 <th class="px-4 py-2">Time</th>
                                 <th class="px-4 py-2">Duration</th>
                                 <th class="px-4 py-2">Rate</th>
@@ -494,50 +558,48 @@ use App\Enums\PermissionsEnum;
                             @php
                             $totalRate = 0;
                             $totalDuration = 0;
-
+                            $footertotalDuration = 0;
+                            // dd($rptDeviceTimeTransactions);
                             @endphp
                             @foreach($rptDeviceTimeTransactions as $transaction)
                             @php
-
-                            if ($transaction->TransactionType == 'End')
-                            {
+                            // Accumulate total rate and duration
+                            if ($transaction->TransactionType == 'End'){
                             $totalRate += $transaction->Rate;
-                            $totalDuration += $transaction->Duration;
+                            $totalDuration = $transaction->Duration;
+                            }
+                            if ($transaction->TransactionType == 'Start' || $transaction->TransactionType == 'Extend')
+                            {
+                            $footertotalDuration += $transaction->Duration;
                             }
 
-
+                            // Determine the creator name
                             $creatorName = 'N/A';
-
-                            if ($transaction->CreatedByUserId === 999999)
-                            {
+                            if ($transaction->CreatedByUserId === 999999) {
                             $creatorName = 'Device';
-                            }
-                            else
-                            {
-                            if ($transaction->creator) {
-                            if ($transaction->creator->UserID > 0) {
+                            } elseif ($transaction->creator && $transaction->creator->UserID > 0) {
                             $creatorName = $transaction->creator->FirstName . ' ' . $transaction->creator->LastName;
                             }
-                            }
-                            }
-
                             @endphp
-
                             @if ($transaction->TransactionType == 'End')
                             <tr>
+                                <td>{{ $transaction->device ? $transaction->device->ExternalDeviceName : 'N/A' }}</td>
                                 <td>{{ $transaction->TransactionType }}</td>
+                                <td></td>
                                 <td>{{ $transaction->Time->format('F d, Y h:i:s A') }}</td>
                                 <td colspan="2" class="font-bold">{{ $transaction->StoppageType }} Stoppage</td>
                                 <td>{{ $creatorName }}</td>
                             </tr>
                             <tr class="font-bold">
-                                <td colspan="2" class="font-bold">Total Duration and Rate</td>
-                                <td>{{ convertMinutesToHoursAndMinutes($transaction->Duration) }}</td>
-                                <td colspan="2">PHP {{ number_format($transaction->Rate, 2) }}</td>
+                                <td colspan="4" class="font-bold">Total Duration and Rate</td>
+                                <td>{{ convertSecondsToTimeFormat($totalDuration) }}</td>
+                                <td colspan="3">PHP {{ number_format($transaction->Rate, 2) }}</td>
                             </tr>
                             @elseif ($transaction->TransactionType == 'Pause' && $transaction->Reason == null)
                             <tr>
+                                <td>{{ $transaction->device ? $transaction->device->ExternalDeviceName : 'N/A' }}</td>
                                 <td>{{ $transaction->TransactionType }}</td>
+                                <td></td>
                                 <td>{{ $transaction->Time->format('F d, Y h:i:s A') }}</td>
                                 <td colspan="2" class="font-bold">Remaining time: {{
                                     convertSecondsToTimeFormat($transaction->Duration) }}</td>
@@ -545,7 +607,9 @@ use App\Enums\PermissionsEnum;
                             </tr>
                             @elseif ($transaction->TransactionType == 'Pause' && $transaction->Reason != null)
                             <tr>
+                                <td>{{ $transaction->device ? $transaction->device->ExternalDeviceName : 'N/A' }}</td>
                                 <td>{{ $transaction->TransactionType }}</td>
+                                <td></td>
                                 <td>{{ $transaction->Time->format('F d, Y h:i:s A') }}</td>
                                 <td colspan="2">
                                     <a href="javascript:void(0);"
@@ -557,48 +621,169 @@ use App\Enums\PermissionsEnum;
                             </tr>
                             @elseif ($transaction->TransactionType == 'Start Free')
                             <tr>
-                            <tr>
+                                <td>{{ $transaction->device ? $transaction->device->ExternalDeviceName : 'N/A' }}</td>
                                 <td>{{ $transaction->TransactionType }}</td>
+                                <td></td>
                                 <td>{{ $transaction->Time->format('F d, Y h:i:s A') }}</td>
                                 <td colspan="2">
                                     <a href="javascript:void(0);"
                                         onclick="showReasonModal('{{ $transaction->Reason }}')">
                                         Show reason
-                                        <!-- Shorten the display -->
                                     </a>
                                 </td>
                                 <td>{{ $creatorName }}</td>
                             </tr>
-                            </tr>
                             @elseif ($transaction->TransactionType == 'End Free')
                             <tr>
+                                <td>{{ $transaction->device ? $transaction->device->ExternalDeviceName : 'N/A' }}</td>
                                 <td>{{ $transaction->TransactionType }}</td>
+                                <td></td>
                                 <td>{{ $transaction->Time->format('F d, Y h:i:s A') }}</td>
                                 <td colspan="2">Duration: {{ convertSecondsToTimeFormat($transaction->Duration) }}</td>
                                 <td>{{ $creatorName }}</td>
                             </tr>
                             @elseif ($transaction->TransactionType == 'Resume')
                             <tr>
+                                <td>{{ $transaction->device ? $transaction->device->ExternalDeviceName : 'N/A' }}</td>
                                 <td>{{ $transaction->TransactionType }}</td>
+                                <td></td>
                                 <td colspan="3">{{ $transaction->Time->format('F d, Y h:i:s A') }}</td>
                                 <td>{{ $creatorName }}</td>
                             </tr>
                             @else
                             <tr>
+                                @if ($transaction->TransactionType == 'Start')
+                                <td>{{ $transaction->device ? $transaction->device->ExternalDeviceName : 'N/A' }}</td>
                                 <td>{{ $transaction->TransactionType }}</td>
+                                <td>{{ $transaction->IsOpenTime == 1 ? "Yes" : "No" }}</td>
                                 <td>{{ $transaction->Time->format('F d, Y h:i:s A') }}</td>
-                                <td>{{ $transaction->Duration }}</td>
+                                <td>{{ convertSecondsToTimeFormat($transaction->Duration) }}</td>
                                 <td>{{ number_format($transaction->Rate, 2) }}</td>
                                 <td>{{ $creatorName }}</td>
+                                @else
+                                <td>{{ $transaction->device ? $transaction->device->ExternalDeviceName : 'N/A' }}</td>
+                                <td>{{ $transaction->TransactionType }}</td>
+                                <td></td>
+                                <td>{{ $transaction->Time->format('F d, Y h:i:s A') }}</td>
+                                <td>{{ convertSecondsToTimeFormat($transaction->Duration) }}</td>
+                                <td>{{ number_format($transaction->Rate, 2) }}</td>
+                                <td>{{ $creatorName }}</td>
+                                @endif
                             </tr>
                             @endif
                             @endforeach
                         </tbody>
                         <tfoot class="sticky bottom-0 bg-white !font-bold">
                             <tr class="!font-bold bg-cyan-100 h-20">
-                                <td colspan="2" class="!font-bold">Overall Duration and Rate Total</td>
-                                <td class="!font-bold">{{ convertMinutesToHoursAndMinutes($totalDuration) }}</td>
-                                <td colspan="2" class="!font-bold">PHP {{ number_format($totalRate, 2) }}</td>
+                                <td colspan="4" class="!font-bold">Overall Duration and Rate Total</td>
+                                <td class="!font-bold">{{ convertSecondsToTimeFormat($footertotalDuration) }}</td>
+                                <td colspan="3" class="!font-bold">PHP {{ number_format($totalRate, 2) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tblOverview" class="row !block">
+            <div class="column">
+                <div id="newTableContainer" class="ui celled table-container max-h-[500px] overflow-y-auto">
+                    <table class="ui celled table" id="gameSessionsTable">
+                        <thead class="sticky top-0 bg-white">
+                            <tr>
+                                <th class="px-4 py-2">Device</th>
+                                <th class="px-4 py-2">Start Time</th>
+                                <th class="px-4 py-2">End Time</th>
+                                <th class="px-4 py-2">Open time?</th>
+                                <th class="px-4 py-2">Total Duration</th>
+                                <th class="px-4 py-2">Total Rate</th>
+                                <th class="px-4 py-2">Summary</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php
+                            $sessions = []; // Array to store sessions
+                            $sessionMap = []; // Map to track the last session ID for each device
+
+                            // Iterate through transactions and group by DeviceID
+                            foreach ($rptDeviceTimeTransactions->sortBy('TransactionID') as $transaction) {
+                            $deviceId = $transaction->DeviceID; // Group by DeviceID
+                            $deviceName = $transaction->device ? $transaction->device->ExternalDeviceName : 'N/A';
+
+                            // Handle Start transaction
+                            if ($transaction->TransactionType == 'Start') {
+                            $sessionId = $transaction->DeviceTimeTransactionsID;
+                            $sessionMap[$deviceId] = $sessionId;
+
+                            $sessions[$sessionId] = [
+                            'deviceName' => $deviceName,
+                            'startTime' => $transaction->Time,
+                            'endTime' => null,
+                            'isOpenTime' => $transaction->IsOpenTime,
+                            'totalDuration' => $transaction->Duration,
+                            'totalRate' => $transaction->Rate,
+                            'transactions' => [$transaction],
+                            ];
+                            }
+
+                            // Handle Extend transaction: add the duration and rate to the same session
+                            elseif ($transaction->TransactionType == 'Extend') {
+                            $sessionId = $sessionMap[$deviceId] ?? null;
+                            if ($sessionId && isset($sessions[$sessionId]['startTime']) &&
+                            !isset($sessions[$sessionId]['endTime'])) {
+                            $sessions[$sessionId]['totalDuration'] += $transaction->Duration ?? 0;
+                            $sessions[$sessionId]['totalRate'] += $transaction->Rate ?? 0;
+                            $sessions[$sessionId]['transactions'][] = $transaction;
+                            }
+                            }
+
+                            // Handle End transaction: set the end time for the same session
+                            elseif ($transaction->TransactionType == 'End') {
+                            $sessionId = $sessionMap[$deviceId] ?? null;
+                            if ($sessionId && isset($sessions[$sessionId]['startTime']) &&
+                            !isset($sessions[$sessionId]['endTime'])) {
+                            $sessions[$sessionId]['endTime'] = $transaction->Time;
+                            $sessions[$sessionId]['transactions'][] = $transaction;
+                            }
+                            }
+
+                            // Handle other transaction types
+                            elseif ($transaction->TransactionType == 'Start Free') {}
+                            elseif ($transaction->TransactionType == 'End Free') {}
+                            else {
+                            $sessionId = $sessionMap[$deviceId] ?? null;
+                            if ($sessionId) {
+                            $sessions[$sessionId]['transactions'][] = $transaction;
+                            }
+                            }
+                            }
+                            @endphp
+
+                            @foreach($sessions as $session)
+                            <tr>
+                                <td>{{ $session['deviceName'] }}</td>
+                                <td>{{ $session['startTime'] ? $session['startTime']->format('F d, Y h:i:s A') : 'N/A'
+                                    }}</td>
+                                <td>{{ $session['endTime'] ? $session['endTime']->format('F d, Y h:i:s A') : 'N/A' }}
+                                </td>
+                                <td>{{ $session['isOpenTime'] === 1 ? 'Yes' : 'No' }}</td>
+                                <td>{{ convertSecondsToTimeFormat($session['totalDuration'] ?? 0 )}}</td>
+                                <td>PHP {{ number_format($session['totalRate'], 2) }}</td>
+                                <td>
+                                    <a href="javascript:void(0);"
+                                        onclick='showSessionDetailsModal({{ json_encode($session["transactions"]) }})'>
+                                        View Summary
+                                    </a>
+                                </td>
+                            </tr>
+                            @endforeach
+
+                        </tbody>
+                        <tfoot class="sticky bottom-0 bg-white !font-bold">
+                            <tr class="!font-bold bg-cyan-100 h-20">
+                                <td colspan="4" class="!font-bold">Overall Duration and Rate Total</td>
+                                <td class="!font-bold">{{ convertSecondsToTimeFormat($totalDuration) }}</td>
+                                <td colspan="3" class="!font-bold">PHP {{ number_format($totalRate, 2) }}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -607,6 +792,27 @@ use App\Enums\PermissionsEnum;
         </div>
         @endcan
 
+    </div>
+</div>
+<div id="sessionDetailsModal" class="ui modal">
+    <div class="header">Game Session Details</div>
+    <div class="content">
+        <table class="ui celled table">
+            <thead>
+                <tr>
+                    <th>Transaction</th>
+                    <th>Time</th>
+                    <th>Duration</th>
+                    <th>Rate</th>
+                    <th>Triggered By</th>
+                </tr>
+            </thead>
+            <tbody id="sessionDetailsTableBody"></tbody>
+            <tfoot id="sessionDetailsTableFooter"></tfoot>
+        </table>
+    </div>
+    <div class="actions">
+        <div class="ui button" onclick="hideSessionDetailsModal()">Close</div>
     </div>
 </div>
 <div id="reasonModal" class="ui modal">
@@ -635,7 +841,154 @@ use App\Enums\PermissionsEnum;
         }
     }
 
+    // Function to hide the modal
+    function hideSessionDetailsModal() {
+        $('#sessionDetailsModal').modal('hide');
+    }
+
+    // Function to convert seconds to a formatted string (hours, minutes, seconds)
+    function convertSecondsToTimeFormat(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const remainingSeconds = seconds % 60;
+
+        let timeString = '';
+
+        if (hours > 0) {
+            timeString += `${hours} hr${hours > 1 ? 's' : ''} `;
+        }
+        if (minutes > 0) {
+            timeString += `${minutes} min${minutes > 1 ? 's' : ''} `;
+        }
+        if (remainingSeconds > 0) {
+            timeString += `${remainingSeconds} sec${remainingSeconds > 1 ? 's' : ''}`;
+        }
+
+        return timeString.trim();
+    }
+
+    function validateAndFormatNumber(value) {
+        // Convert value to a number
+        const number = typeof value === 'string' ? parseFloat(value) : value;
+
+        // Validate the number
+        if (typeof number !== 'number' || isNaN(number)) {
+            console.error('Invalid number:', value);
+            return null; // Handle invalid numbers
+        }
+
+        // Format the number to two decimal places
+        return number.toFixed(2);
+    }
+
+    function showSessionDetailsModal(transactions) {
+        // Parse the transactions string into an array
+        const parsedTransactions = typeof transactions === 'string' ? JSON.parse(decodeURIComponent(transactions)) : transactions;
+
+        const tableBody = document.getElementById('sessionDetailsTableBody');
+        const tableFooter = document.getElementById('sessionDetailsTableFooter');
+        tableBody.innerHTML = ''; // Clear previous content
+        tableFooter.innerHTML = ''; // Clear previous content
+
+        let footerDuration = 0;
+        let footerRate = 0;
+
+        parsedTransactions.sort((a, b) => new Date(a.Time) - new Date(b.Time));
+
+        parsedTransactions.forEach(transaction => {
+            let creatorName = 'N/A';
+            if (transaction.CreatedByUserId === 999999) {
+                creatorName = 'Device';
+            } else if (transaction.creator && transaction.creator.UserID > 0) {
+                creatorName = transaction.creator.FirstName + ' ' + transaction.creator.LastName;
+            }
+
+            let row;
+
+            if (transaction.TransactionType === 'Pause')
+            {
+                row = `
+                <tr>
+                    <td>${transaction.TransactionType}</td>
+                    <td>${new Date(transaction.Time).toLocaleString()}</td>
+                    <td colspan="2" class="font-bold">Remaining time: ${convertSecondsToTimeFormat(transaction.Duration ?? 0)}</td>
+                    <td>${creatorName}</td>
+                </tr>`;
+            }
+            else if (transaction.TransactionType === 'Resume')
+            {
+                row = `
+                <tr>
+                    <td>${transaction.TransactionType}</td>
+                    <td>${new Date(transaction.Time).toLocaleString()}</td>
+                    <td colspan="2" class="font-bold"></td>
+                    <td>${creatorName}</td>
+                </tr>`;
+            }
+            else {
+                row = `
+                <tr>
+                    <td>${transaction.TransactionType}</td>
+                    <td>${new Date(transaction.Time).toLocaleString()}</td>
+                    <td>${convertSecondsToTimeFormat(transaction.Duration ?? 0)}</td>
+                    <td>PHP ${transaction.Rate ? transaction.Rate : '0.00'}</td>
+                    <td>${creatorName}</td>
+                </tr>`;
+            }
+
+            if (transaction.TransactionType === 'Start' || transaction.TransactionType === 'Extend')
+            {
+                footerDuration += transaction.Duration;
+                footerRate += parseFloat(transaction.Rate);
+            }
+            
+            
+            tableBody.insertAdjacentHTML('beforeend', row);
+        });
+
+        let foot;
+
+        foot = `
+        <tr class="!font-bold bg-cyan-100 h-20">
+                <td colspan="2" class="!font-bold">Overall Duration and Rate Total</td>
+                <td class="!font-bold">${convertSecondsToTimeFormat(footerDuration)}</td>
+                <td colspan="2" class="!font-bold">PHP ${validateAndFormatNumber(footerRate)}</td>
+                </tr>
+        `;
+
+        tableFooter.insertAdjacentHTML('beforeend', foot);
+
+        $('#sessionDetailsModal').modal('show'); // Assuming you are using Semantic UI for modals
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
+
+
+        const tblOverview = document.getElementById("tblOverview");
+        const tblDetailed = document.getElementById("tblDetailed");
+
+        document.getElementById("detailedButton").addEventListener("click", () => {
+            tblDetailed.classList.add("!block");
+            tblDetailed.classList.remove("!hidden");
+            tblOverview.classList.remove("!block");
+            tblOverview.classList.add("!hidden");
+            document.getElementById("detailedButton").classList.add("bg-blue-500", "text-white");
+            document.getElementById("overviewButton").classList.remove("bg-blue-500", "text-white");
+            document.getElementById("detailedButton").classList.remove("bg-gray-200", "text-gray-800");
+            document.getElementById("overviewButton").classList.add("bg-gray-200", "text-gray-800");
+        });
+
+        document.getElementById("overviewButton").addEventListener("click", () => {
+            tblOverview.classList.add("!block");
+            tblOverview.classList.remove("!hidden");
+            tblDetailed.classList.remove("!block");
+            tblDetailed.classList.add("!hidden");
+            document.getElementById("overviewButton").classList.add("bg-blue-500", "text-white");
+            document.getElementById("detailedButton").classList.remove("bg-blue-500", "text-white");
+            document.getElementById("overviewButton").classList.remove("bg-gray-200", "text-gray-800");
+            document.getElementById("detailedButton").classList.add("bg-gray-200", "text-gray-800");
+        });
+
         const deviceID = {{ $device->DeviceID }}; // Pass the DeviceID to JavaScript
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         const disableForm = document.getElementById('disable-form');
@@ -647,13 +1000,14 @@ use App\Enums\PermissionsEnum;
         ];
 
         const ctx = document.getElementById("rateChart");
-        
+        let chart;
+
         if (ctx)
         {
             ctx.getContext("2d");
-            const chart = new Chart(ctx, getConfig("monthly"));
+            
             fetchChartData("monthly", deviceID);
-
+            chart = new Chart(ctx, getConfig("monthly"));
 
             document.getElementById("dailyButton").addEventListener("click", () => {
                 updateChartTitle("daily");
@@ -1106,6 +1460,53 @@ use App\Enums\PermissionsEnum;
                     }, 2000);
                 } else {
                     showToast('Please enter a valid base time and rate greater than 0.');
+                }
+            });
+        }
+
+        const saveOpenTimeButton = document.getElementById('saveOpenTime');
+        const txt_open_time_rate = document.getElementById('txt_open_time_rate');
+        const txt_open_time = document.getElementById('txt_open_time');
+
+        if (saveOpenTimeButton)
+        {
+            saveOpenTimeButton.addEventListener('click', function () {
+                const newOpenTime = txt_open_time.value;  
+                const newOpenRate = txt_open_time_rate.value;  
+                
+                if (newOpenTime > 0 && newOpenRate > 0) {
+                    showLoading();
+
+                    setTimeout(() => {
+                        fetch('/device-time/open', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}' // Ensure you have this token for Laravel
+                            },
+                            body: JSON.stringify({
+                                open_time: newOpenTime,
+                                open_rate: newOpenRate,
+                                device_id: '{{ $device->DeviceID }}'
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            hideLoading(); // Hide loading after the request completes
+                            if (data.success) {
+                                showToast(data.message, 'success');
+                            } else {
+                                showToast(data.message || 'An error occurred.', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            hideLoading();
+                            console.log('Fetch error:', error);
+                            showToast('An error occurred. Please try again.', 'error');
+                        });
+                    }, 2000);
+                } else {
+                    showToast('Please enter a valid open time and rate greater than 0.');
                 }
             });
         }
