@@ -525,57 +525,64 @@ $increments = $device->increments;
                     }
                     else 
                     {
-                        const route = `/device-time/start/open/${deviceId}`;
-                        fetch(route, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': csrfToken,
-                            },
-                            body: JSON.stringify({})
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                showToast("Error on device response. Please see logs for more info", 'error');
-                                return response.text().then(text => { throw new Error(text); });
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
+                        if (parseInt(baseTime) > 0)
+                        {
+                            const route = `/device-time/start/open/${deviceId}`;
+                            fetch(route, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': csrfToken,
+                                },
+                                body: JSON.stringify({})
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    showToast("Error on device response. Please see logs for more info", 'error');
+                                    return response.text().then(text => { throw new Error(text); });
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                hideLoading();
+                                if (data.success) {
+                                    fetchActiveTransactions(); location.reload();
+
+                                    if (endButton)
+                                    {
+                                        endButton.classList.remove('!hidden');
+                                        endButton.classList.add('!block');
+                                    }
+
+                                    startTimeCollection.classList.add('!hidden');
+                                    startTimeCollection.classList.remove('!block');
+
+                                    const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
+                                    const extendButton = document.querySelector(`.extend-time-single-button[data-id="${deviceId}"]`);
+
+                                    if (extendButtonMenu) {
+                                        extendButtonMenu.classList.remove('disabled');
+                                    }
+                                    if (extendButton) {
+                                        extendButton.classList.remove('disabled');
+                                        extendButton.removeAttribute('disabled'); 
+                                    }
+                                
+                                    updateStatusRibbon(deviceId, 'Running');
+                                    updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate);
+                                } else {
+                                    showToast("Error on device response. Please see logs for more info", 'error');
+                                }
+                            })
+                            .catch(error => {
+                                hideLoading();
+                                showToast("Possible network error occured. Please see logs for more info", 'error');
+                            });
+                        }
+                        else {
+                            showToast("No configuration for Open Time", 'error');
                             hideLoading();
-                            if (data.success) {
-                                fetchActiveTransactions(); location.reload();
-
-                                if (endButton)
-                                {
-                                    endButton.classList.remove('!hidden');
-                                    endButton.classList.add('!block');
-                                }
-
-                                startTimeCollection.classList.add('!hidden');
-                                startTimeCollection.classList.remove('!block');
-
-                                const extendButtonMenu = document.querySelector(`.dropdown[data-id="${deviceId}"]`);
-                                const extendButton = document.querySelector(`.extend-time-single-button[data-id="${deviceId}"]`);
-
-                                if (extendButtonMenu) {
-                                    extendButtonMenu.classList.remove('disabled');
-                                }
-                                if (extendButton) {
-                                    extendButton.classList.remove('disabled');
-                                    extendButton.removeAttribute('disabled'); 
-                                }
-                               
-                                updateStatusRibbon(deviceId, 'Running');
-                                updateUI(deviceId, data.startTime, data.endTime, data.totalTime, data.totalRate);
-                            } else {
-                                showToast("Error on device response. Please see logs for more info", 'error');
-                            }
-                        })
-                        .catch(error => {
-                            hideLoading();
-                            showToast("Possible network error occured. Please see logs for more info", 'error');
-                        });
+                        }
                     }
                 });
                 item.classList.add('event-attached');
