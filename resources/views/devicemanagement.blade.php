@@ -103,7 +103,7 @@ $randomGreeting = $greetings[array_rand($greetings)];
         \App\Enums\TimeTransactionTypeEnum::START)->first();
         $startTime = $startTransaction ? $startTransaction->StartTime : null;
 
-        $isOpenTime = $startTransaction->IsOpenTime;
+        $isOpenTime = $startTransaction ? $startTransaction->IsOpenTime : null;
         $isPause = $activeTransactions->where('TransactionType',
         \App\Enums\TimeTransactionTypeEnum::PAUSE)->first();
 
