@@ -9,12 +9,20 @@ use App\Models\Device;
 use App\Models\DeviceTime;
 use App\Models\DeviceTimeTransactions;
 use App\Models\RptDeviceTimeTransactions;
+use App\Services\FirebaseService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class DeviceMangementController extends Controller
 {
+    protected $firebase;
+
+    public function __construct(FirebaseService $firebase)
+    {
+        $this->firebase = $firebase;
+    }
+
     public function GetDevices(Request $request)
     {
         try {
@@ -80,22 +88,43 @@ class DeviceMangementController extends Controller
     public function InsertDeviceDetails(Request $request)
     {
         $validatedData = $request->validate([
-            'DeviceName' => 'required|string|max:255',
-            'IPAddress' => 'required|ip',
+            'IPAddress' => 'required|string|max:255',
+            'ClientName' => 'required|string|max:255',
             'DeviceStatusID' => 'required|integer',
         ]);
 
         $device = new Device();
         try {
-            $device->DeviceName = $validatedData['DeviceName'];
-            $device->ExternalDeviceName = $validatedData['DeviceName'];
+            $deviceCount = Device::count();
+
+            $deviceName = $validatedData['ClientName'] . '-' . $deviceCount + 1;
+
+            $device->DeviceName = $deviceName;
+            $device->ExternalDeviceName = $deviceName;
             $device->IPAddress = $validatedData['IPAddress'];
+            $device->ClientName = $validatedData['ClientName'];
             $device->WatchdogInterval = 30;
             $device->RemainingTimeNotification = 0;
             $device->DeviceStatusID = $validatedData['DeviceStatusID'];
+            $device->IsOnline = true;
+            $device->last_heartbeat = Carbon::now();
             $device->save();
 
             LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Device ' . $device->ExternalDeviceName . ' registered.', LogTypeEnum::INFO, auth()->id());
+
+            $firebasePath = '/' . $device->ClientName . '/devices/' . $device->DeviceID;
+            $firebaseData = [
+                'command' => 'initialization',
+                'span' => 0,
+            ];
+
+            // Check if data was successfully set in Firebase
+            $firebaseAcknowledged = $this->firebase->setData($firebasePath, $firebaseData);
+            
+            if (!$firebaseAcknowledged) {
+                Log::error('Device registered, but failed to set data in Firebase.');
+                return response()->json(['success' => false, 'message' => 'Failed to register device.'], 500);
+            }
 
             return response()->json(['success' => true, 'message' => 'Device registered successfully.', 'device_id' => $device->DeviceID], 201);
         } catch (\Exception $e) {
@@ -108,17 +137,14 @@ class DeviceMangementController extends Controller
     {
         $validatedData = $request->validate([
             'DeviceID' => 'required|integer',
-            'DeviceName' => 'required|string|max:255',
-            'IPAddress' => 'required|ip',
+            'IPAddress' => 'required|string|max:255',
             'DeviceStatusID' => 'required|integer',
         ]);
 
         $device = Device::with('deviceStatus')->findOrFail($validatedData['DeviceID']);
         try {
-            $device->DeviceName = $validatedData['DeviceName'];
-            $device->ExternalDeviceName = $validatedData['DeviceName'];
-            $device->DeviceStatusID = DeviceStatusEnum::PENDING_ID;
             $device->IPAddress = $validatedData['IPAddress'];
+            $device->DeviceStatusID = DeviceStatusEnum::PENDING_ID;
             $device->save();
 
             LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, $device->DeviceName . ': Device info update through AP', LogTypeEnum::INFO, null);
@@ -139,18 +165,23 @@ class DeviceMangementController extends Controller
             return response()->json(['success' => false, 'message' => 'Device not found.'], 404);
         }
 
-        $deviceIpAddress = $device->IPAddress;
-
         try {
-            $client = new \GuzzleHttp\Client();
-            $response = $client->delete("http://$deviceIpAddress/api/reset");
+            $firebasePath = '/' . $device->ClientName . '/devices/' . $device->DeviceID;
+            $firebaseData = [
+                'command' => 'delete',
+                'span' => 0
+            ];
 
-            if ($response->getStatusCode() == 200) {
+            // Check if data was successfully set in Firebase
+            $firebaseAcknowledged = $this->firebase->setData($firebasePath, $firebaseData);
+
+            if ($firebaseAcknowledged) {
                 LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Device ' . $device->ExternalDeviceName . ' deleted.', LogTypeEnum::INFO, auth()->id());
                 $device->delete();
                 return response()->json(['success' => true, 'message' => 'Device deleted successfully.']);
             }
-            return response()->json(['success' => false, 'message' => 'Failed to reset the device.'], $response->getStatusCode());
+
+            return response()->json(['success' => false, 'message' => 'Failed to delete device.'], 500);
         } catch (\Exception $e) {
             Log::error('Error deleting device: ' . $device->DeviceID, ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -165,18 +196,27 @@ class DeviceMangementController extends Controller
             return response()->json(['success' => false, 'message' => 'Device not found.'], 404);
         }
 
-        $deviceIpAddress = $device->IPAddress;
-
         try {
-            $client = new \GuzzleHttp\Client();
-            $response = $client->get("http://$deviceIpAddress/api/test");
 
-            if ($response->getStatusCode() == 200) {
-                return response()->json(['success' => true, 'message' => 'Device tested successfully.']);
+            // Add to Firebase
+            $firebasePath = '/' . $device->ClientName . '/devices/' . $device->DeviceID;
+            $firebaseData = [
+                'command' => 'test',
+                'span' => 0
+            ];
+
+            // Check if data was successfully set in Firebase
+            $firebaseAcknowledged = $this->firebase->setData($firebasePath, $firebaseData);
+            
+            if (!$firebaseAcknowledged) {
+                return response()->json(['success' => false, 'message' => 'Failed to test the device.'], 500);
             }
-            return response()->json(['success' => false, 'message' => 'Failed to test the device.'], $response->getStatusCode());
-        } catch (\Exception $e) {
-            Log::error('Error fetching devices', ['error' => $e->getMessage()]);
+
+            return response()->json(['success' => true, 'message' => 'Device tested successfully.']);
+        } 
+        catch (\Exception $e)
+        {
+            Log::error('Error testing device', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
@@ -189,13 +229,17 @@ class DeviceMangementController extends Controller
             return response()->json(['success' => false, 'message' => 'Device not found.'], 404);
         }
 
-        $deviceIpAddress = $device->IPAddress;
-
         try {
-            $client = new \GuzzleHttp\Client();
-            $response = $client->get("http://$deviceIpAddress/api/disable");
+            $firebasePath = '/' . $device->ClientName . '/devices/' . $device->DeviceID;
+            $firebaseData = [
+                'command' => 'disable',
+                'span' => 0
+            ];
 
-            if ($response->getStatusCode() == 200) {
+            // Check if data was successfully set in Firebase
+            $firebaseAcknowledged = $this->firebase->setData($firebasePath, $firebaseData);
+
+            if ($firebaseAcknowledged) {
                 $device->DeviceStatusID = DeviceStatusEnum::DISABLED_ID;
                 $device->save();
 
@@ -204,9 +248,9 @@ class DeviceMangementController extends Controller
                 return response()->json(['success' => true, 'message' => 'Device disabled successfully']);
             }
 
-            return response()->json(['success' => false, 'message' => 'Failed to disable the device'], $response->getStatusCode());
+            return response()->json(['success' => false, 'message' => 'Failed to disable the device.'], 500);
         } catch (\Exception $e) {
-            Log::error('Error fetching devices', ['error' => $e->getMessage()]);
+            Log::error('Failed to disable the device', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
@@ -219,13 +263,17 @@ class DeviceMangementController extends Controller
             return response()->json(['success' => false, 'message' => 'Device not found.'], 404);
         }
 
-        $deviceIpAddress = $device->IPAddress;
-
         try {
-            $client = new \GuzzleHttp\Client();
-            $response = $client->get("http://$deviceIpAddress/api/enable");
+            $firebasePath = '/' . $device->ClientName . '/devices/' . $device->DeviceID;
+            $firebaseData = [
+                'command' => 'enable',
+                'span' => 0
+            ];
 
-            if ($response->getStatusCode() == 200) {
+            // Check if data was successfully set in Firebase
+            $firebaseAcknowledged = $this->firebase->setData($firebasePath, $firebaseData);
+
+            if ($firebaseAcknowledged) {
                 $device->DeviceStatusID = DeviceStatusEnum::INACTIVE_ID;
                 $device->save();
 
@@ -234,9 +282,9 @@ class DeviceMangementController extends Controller
                 return response()->json(['success' => true, 'message' => 'Device enabled successfully']);
             }
 
-            return response()->json(['success' => false, 'message' => 'Failed to enable the device'], $response->getStatusCode());
+            return response()->json(['success' => false, 'message' => 'Failed to enable the device.'], 500);
         } catch (\Exception $e) {
-            Log::error('Error fetching devices', ['error' => $e->getMessage()]);
+            Log::error('Failed to enable the device', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
@@ -249,33 +297,19 @@ class DeviceMangementController extends Controller
         ]);
 
         $device = Device::findOrFail($request->external_device_id);
-        $deviceIpAddress = $device->IPAddress;
-
+        
         $orginalName = $device->ExternalDeviceName;
         $newDeviceName = $request->external_device_name;
 
         try {
-            $client = new \GuzzleHttp\Client();
-            $response = $client->post("http://{$deviceIpAddress}/api/updateDeviceName", [
-                'body' => $newDeviceName,
-                'headers' => [
-                    'Content-Type' => 'text/plain',
-                ],
-            ]);
+            $device->ExternalDeviceName = $newDeviceName;
+            $device->save();
 
-            if ($response->getStatusCode() == 200) {
+            LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Changed device name from ' . $orginalName . ' to ' . $device->ExternalDeviceName, LogTypeEnum::INFO, auth()->id());
 
-
-                $device->ExternalDeviceName = $newDeviceName;
-                $device->save();
-
-                LoggingController::InsertLog(LogEntityEnum::DEVICE, $device->DeviceID, 'Changed device name from ' . $orginalName . ' to ' . $device->ExternalDeviceName, LogTypeEnum::INFO, auth()->id());
-
-                return response()->json(['success' => true, 'message' => 'Device name updated successfully.']);
-            }
-            return response()->json(['success' => false, 'message' => 'Failed to update the device name.'], $response->getStatusCode());
+            return response()->json(['success' => true, 'message' => 'Device name updated successfully.']);
         } catch (\Exception $e) {
-            Log::error('Error fetching devices', ['error' => $e->getMessage()]);
+            Log::error('Failed to update the device name', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
@@ -288,21 +322,20 @@ class DeviceMangementController extends Controller
         ]);
 
         $device = Device::findOrFail($request->deviceId);
-        $deviceIpAddress = $device->IPAddress;
         $originalWatchdogInterval = $device->WatchdogInterval;
         $newWatchdogInterval = $request->watchdogInterval;
 
         try {
-            $client = new \GuzzleHttp\Client();
-            $response = $client->post("http://{$deviceIpAddress}/api/setWatchdogInterval", [
-                'body' => $newWatchdogInterval,
-                'headers' => [
-                    'Content-Type' => 'text/plain',
-                ],
-            ]);
+            $firebasePath = '/' . $device->ClientName . '/devices/' . $device->DeviceID;
+            $firebaseData = [
+                'command' => 'setWatchdogInterval',
+                'span' => $newWatchdogInterval
+            ];
 
-            if ($response->getStatusCode() == 200) {
-                // Update the interval only if the device update was successful
+            // Check if data was successfully set in Firebase
+            $firebaseAcknowledged = $this->firebase->setData($firebasePath, $firebaseData);
+
+            if ($firebaseAcknowledged) {
                 $device->WatchdogInterval = $newWatchdogInterval;
                 $device->save();
 
@@ -310,10 +343,11 @@ class DeviceMangementController extends Controller
 
                 return response()->json(['success' => true, 'message' => 'Device watchdog interval updated successfully.']);
             }
-            return response()->json(['success' => false, 'message' => 'Failed to update the device watchdog interval.'], $response->getStatusCode());
+
+            return response()->json(['success' => false, 'message' => 'Failed to enable the device.'], 500);
         } catch (\Exception $e) {
-            Log::error('Error fetching devices', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            Log::error('Failed to update the device watchdog interval', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to update the device watchdog interval.'], 500);
         }
     }
 
@@ -338,6 +372,25 @@ class DeviceMangementController extends Controller
             return response()->json(['success' => true, 'message' => 'Device remaining time notification updated successfully.']);
         } catch (\Exception $e) {
             Log::error('Error fetching devices', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function UpdateHeartbeat(Request $request)
+    {
+        $device = Device::find($request->device_id);
+
+        try {
+            if ($device) {
+                $device->last_heartbeat = Carbon::now();
+                $device->IsOnline = true;
+                $device->save();
+        
+                return response()->json(['success' => true, 'message' => 'Heartbeat received']);
+            }
+        }
+        catch (\Exception $e) {
+            Log::error('Error updating device heartbeat', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }

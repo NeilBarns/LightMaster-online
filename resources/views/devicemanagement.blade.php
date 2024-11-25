@@ -49,7 +49,7 @@ $randomGreeting = $greetings[array_rand($greetings)];
 <div class="flex flex-col h-full px-5 py-7" id="device-management-page">
     <div class="ui one column stackable grid">
         <div class="column">
-            <div class="ui header">{{ $randomGreeting }}, {{ auth()->user()->FirstName }}!</div>
+            <div class="ui header !text-base">{{ $randomGreeting }}, {{ auth()->user()->FirstName }}!</div>
         </div>
     </div>
 
@@ -97,80 +97,79 @@ $randomGreeting = $greetings[array_rand($greetings)];
         ->first();
 
 
-        if ($activeTransactions->isNotEmpty()) {
-        $totalTime = $activeTransactions
-        ->reject(function ($transaction) {
-        return $transaction->TransactionType == \App\Enums\TimeTransactionTypeEnum::PAUSE;
-        })
-        ->sum('Duration') / 60;
-        $totalRate = number_format($activeTransactions->sum('Rate'), 2);
-
-        $startTransaction = $activeTransactions->where('TransactionType',
-        \App\Enums\TimeTransactionTypeEnum::START)->first();
-        $startTime = $startTransaction ? $startTransaction->StartTime : null;
-
-        $isOpenTime = $startTransaction ? $startTransaction->IsOpenTime : null;
-        $isPause = \App\Models\DeviceTimeTransactions::where('DeviceID', $device->DeviceID)
-        ->where('Active', true)
-        ->whereIn('TransactionType', [\App\Enums\TimeTransactionTypeEnum::PAUSE])
-        ->orderBy('TransactionID', 'desc')
-        ->first();
-
-
-        // Calculate end time based on start time and total time
-        if ($startTime) {
-        $endTime = \Carbon\Carbon::parse($startTime)->addMinutes($totalTime);
-        }
-
-        if ($isOpenTime)
+        if ($activeTransactions->isNotEmpty()) 
         {
-        if ($isPause)
-        {
-        $remainingTime = $isPause->Duration;
-        }
-        else {
-        $remainingTime = $startTime->diffInSeconds(\Carbon\Carbon::now(), false);
-        }
-        }
-        else {
-        if ($isPause)
-        {
-        if ($resume)
-        {
-        if ($resume->StartTime > $isPause->StartTime)
-        {
-        $elapsedTime = ($totalTime * 60) - $isPause->Duration;
-        $endTime = $resume->StartTime->addSeconds($isPause->Duration);
-        $remainingTime = \Carbon\Carbon::now()->diffInSeconds($endTime, false);
-        }
-        else {
-        $remainingTime = $isPause->Duration;
-        }
-        }
-        else {
-        $remainingTime = $isPause->Duration;
-        }
-        }
-        else {
-        if ($endTime) {
-        $remainingTime = \Carbon\Carbon::now()->diffInSeconds($endTime, false); // Calculate remaining time in seconds
-        $remainingTime = $remainingTime > 0 ? $remainingTime : 0; // Ensure it's not negative
+            $totalTime = $activeTransactions
+            ->reject(function ($transaction) {
+            return $transaction->TransactionType == \App\Enums\TimeTransactionTypeEnum::PAUSE;
+            })
+            ->sum('Duration') / 60;
+            
+            $totalRate = number_format($activeTransactions->sum('Rate'), 2);
 
-        }
-        }
-        // Calculate the remaining time
+            $startTransaction = $activeTransactions->where('TransactionType',
+            \App\Enums\TimeTransactionTypeEnum::START)->first();
+            $startTime = $startTransaction ? $startTransaction->StartTime : null;
 
-        }
+            $isOpenTime = $startTransaction ? $startTransaction->IsOpenTime : null;
+
+            $isPause = \App\Models\DeviceTimeTransactions::where('DeviceID', $device->DeviceID)
+            ->where('Active', true)
+            ->whereIn('TransactionType', [\App\Enums\TimeTransactionTypeEnum::PAUSE])
+            ->orderBy('TransactionID', 'desc')
+            ->first();
+
+
+            // Calculate end time based on start time and total time
+            if ($startTime) {
+                $endTime = \Carbon\Carbon::parse($startTime)->addMinutes($totalTime);
+            }
+
+            if ($isOpenTime)
+            {
+                if ($isPause)
+                {
+                    $remainingTime = $isPause->Duration;
+                }
+                else {
+                    $remainingTime = $startTime->diffInSeconds(\Carbon\Carbon::now(), false);
+                }
+            }
+            else 
+            {
+                if ($isPause)
+                {
+                    if ($resume)
+                    {
+                        $elapsedTime = ($totalTime * 60) - $isPause->Duration;
+                        $endTime = $resume->StartTime->addSeconds($elapsedTime);
+                        // $remainingTime = $elapsedTime;//\Carbon\Carbon::now()->diffInSeconds($endTime, false);
+                        $remainingTime = \Carbon\Carbon::now()->diffInSeconds($endTime, false);
+                    }
+                    else {
+                        $elapsedTime = ($totalTime * 60) - $isPause->Duration;
+                        $remainingTime = $elapsedTime;
+                    }
+                }
+                else 
+                {
+                    if ($endTime) 
+                    {
+                        $remainingTime = \Carbon\Carbon::now()->diffInSeconds($endTime, false); // Calculate remaining time in seconds
+                        $remainingTime = $remainingTime > 0 ? $remainingTime : 0; // Ensure it's not negative
+                    }
+                }
+            }
 
         } else {
-        $totalRate = 0; // Ensure totalRate is 0 if no transactions
+            $totalRate = 0; // Ensure totalRate is 0 if no transactions
         }
 
         $remTimeNotif = $device->RemainingTimeNotification;
 
         @endphp
         <x-device-card :device="$device" :totalTime="$totalTime" :baseTime="$baseTime" :openTime="$openTime"
-            :totalRate="$totalRate" :startTime="$startTime" :endTime="$endTime" :remainingTime="$remainingTime"
+            :totalRate="$totalRate" :startTime="$startTime" :endTime="$endTime" :remainingTime="$remainingTime" :usedTime="$isPause->Duration ?? 0"
             :remTimeNotif="$remTimeNotif" :isOpenTime="$isOpenTime" />
         @endforeach
 
@@ -195,12 +194,14 @@ $randomGreeting = $greetings[array_rand($greetings)];
     deviceCards.forEach(function(card) {
         const deviceId = card.getAttribute('data-device-id');
         let remainingTime = parseInt(card.getAttribute('data-remaining-time'));
-        const deviceStatus = card.getAttribute('data-device-status'); // Get the device status
+        const deviceStatus = card.getAttribute('data-device-status'); 
         let openTime = card.getAttribute('data-isOpenTime');
         let openTimeTime = card.getAttribute('data-openTime');
         let openTimeRate = card.getAttribute('data-openRate');
+        let syncCountDown = 30; //Every 10 sync with the node
 
         const timerElement = card.querySelector('.remaining-time');
+        const bareTimerElement = card.querySelector('.bare-remaining-time');
 
         // Function to update the displayed time
         function updateTimer(timerElement, remainingTime) {
@@ -208,6 +209,38 @@ $randomGreeting = $greetings[array_rand($greetings)];
             const minutes = Math.floor((remainingTime % 3600) / 60);
             const seconds = remainingTime % 60;
             timerElement.textContent = `Remaining time: ${hours}h ${minutes}m ${seconds}s`;
+            bareTimerElement.textContent = `${remainingTime}`;
+        }
+
+        function syncNode(deviceId, remainingTime)
+        {
+            syncCountDown--;
+
+            if (syncCountDown <= 0) {
+                syncCountDown = 30;
+
+                fetch(`/device-time/sync/${deviceId}/${remainingTime}`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        },
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (!data)
+                        {
+                            console.log('Error:', data);
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                    });
+            }
         }
 
         const deviceSync = document.getElementById(`device-sync-${deviceId}`);
@@ -231,6 +264,7 @@ $randomGreeting = $greetings[array_rand($greetings)];
                         lblTotalRate.textContent = "Total charge/rate: PHP " + parseInt(openTimeRunningRate) + ".00";
                     }
                     
+                    syncNode(deviceId, remainingTime);
                     updateTimer(timerElement, remainingTime);
                 }
                 else {
@@ -247,19 +281,41 @@ $randomGreeting = $greetings[array_rand($greetings)];
                             }
                         }
 
+                        syncNode(deviceId, remainingTime);
                         updateTimer(timerElement, remainingTime);
                     } else {
                         // Clear the interval once the countdown reaches 0
                         clearInterval(interval);
+                        
                         if (deviceSync) {
                             deviceSync.classList.remove('!hidden');
                             deviceSync.classList.add('!flex');
+                            
+                            fetch(`/device-time/end/${deviceId}/0`, {
+                                method: 'GET',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                },
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error('Network response was not ok');
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                console.log('Success:', data);
+                                // Optionally, you can do something after the API call succeeds
+                            })
+                            .catch((error) => {
+                                console.error('Error:', error);
+                            });
                         }
 
                         // Optionally reload the page after 10 seconds
                         setTimeout(() => {
                             location.reload();
-                        }, 10000);
+                        }, 3000);
                     }
                 }
             }, 1000);

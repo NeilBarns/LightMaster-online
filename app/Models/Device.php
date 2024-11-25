@@ -20,13 +20,17 @@ class Device extends Model
         'ExternalDeviceName',
         'Description',
         'DeviceStatusID',
+        'IsOnline',
         'WatchdogInterval',
         'RemainingTimeNotification',
+        'ClientName',
         'IPAddress',
+        'last_heartbeat'
     ];
 
     protected $casts = [
-        'OperationDate' => 'datetime'
+        'OperationDate' => 'datetime',
+        'last_heartbeat' => 'datetime'
     ];
 
 

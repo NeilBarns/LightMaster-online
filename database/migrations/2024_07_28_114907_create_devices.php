@@ -19,12 +19,15 @@ return new class extends Migration
             $table->string('ExternalDeviceName', 50);
             $table->string('Description')->nullable();
             $table->unsignedBigInteger('DeviceStatusID');
-            $table->string('IPAddress');
+            $table->boolean('IsOnline')->nullable();
+            $table->string('ClientName', 50)->nullable();
+            $table->string('IPAddress', 20)->nullable();
             $table->unsignedBigInteger('RemainingTimeNotification')->nullable();
             $table->unsignedBigInteger('WatchdogInterval')->nullable();
             $table->dateTime('OperationDate')->nullable();
+            $table->dateTime('last_heartbeat')->nullable();
             $table->timestamps();
-
+            
             //Indexes
             $table->index('DeviceName');
             $table->index('ExternalDeviceName');
