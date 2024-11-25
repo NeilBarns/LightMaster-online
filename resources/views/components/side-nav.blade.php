@@ -1,3 +1,7 @@
+@php
+use App\Enums\PermissionsEnum;
+@endphp
+
 <div class="h-full flex flex-col bg-color-default ">
     <div class="grow-0 h-16">
         <div class="flex h-full items-center px-4">
@@ -8,52 +12,56 @@
     <div class="flex-1 left-nav">
         <div class="uk-width-1-2@s uk-width-2-5@m" style="width: 100% !important">
             <ul class="uk-nav-default" uk-nav>
-                <li id="dashboard-menu-item" style="display: block"
+                {{-- @can(PermissionsEnum::VIEW_DASHBOARD)
+                <li id="dashboard-menu-item" style="display: none"
                     class="{{ Request::is('dashboard') ? 'active' : '' }}">
                     <a href="/dashboard">
                         <img src="{{ asset('imgs/dashboard.png') }}" alt="Dashboard">
                         Dashboard
                     </a>
                 </li>
+                @endcan --}}
+                @can([PermissionsEnum::ALL_ACCESS_TO_DEVICE, PermissionsEnum::CAN_VIEW_DEVICES])
                 <li id="vehicle-management-menu-item-parent" style="display: block"
                     class="{{ Request::is('device*') ? 'active' : '' }}">
                     <a href="/device">
                         <img src="{{ asset('imgs/microchip.png') }}" alt="Students">
                         Device Management
                     </a>
-                    {{-- <ul class="uk-nav-sub">
-                        <li id="vehicle-owners-menu-item" style="display: block" class="">
-                            <a href="">Vehicle Owners</a>
-                        </li>
-                        <li id="registered-vehicle-menu-item" style="display: block" class="">
-                            <a href="">Registered Vehicles</a>
-                        </li>
-                    </ul> --}}
                 </li>
+                @endcan
+                @can([PermissionsEnum::ALL_ACCESS_TO_REPORTS, PermissionsEnum::CAN_VIEW_ACTIVITY_LOGS_REPORTS,
+                PermissionsEnum::CAN_VIEW_FINANCIAL_REPORTS])
                 <li id="reports-menu-item-parent" style="display: block"
                     class="{{ Request::is('reports') ? 'active' : '' }}">
-                    <a href="/reports">
+                    <a href="#">
                         <img src="{{ asset('imgs/reports.png') }}" alt="Reports">
                         Reports
                     </a>
                     <ul class="uk-nav-sub">
-                        <li class="">
-                            <a href="">Activity Logs</a>
+                        @can([PermissionsEnum::ALL_ACCESS_TO_REPORTS, PermissionsEnum::CAN_VIEW_ACTIVITY_LOGS_REPORTS])
+                        <li class="{{ Request::is('*activity*') ? 'active' : '' }}">
+                            <a href="/activity-logs">Activity Logs</a>
                         </li>
-                        <li class="">
-                            <a href="">Financial Reports</a>
+                        @endcan
+                        @can([PermissionsEnum::ALL_ACCESS_TO_REPORTS, PermissionsEnum::CAN_VIEW_FINANCIAL_REPORTS])
+                        <li class="{{ Request::is('*finance*') ? 'active' : '' }}">
+                            <a href="/reports/finance">Action Reports</a>
                         </li>
+                        @endcan
                     </ul>
                 </li>
+                @endcan
+                @can([PermissionsEnum::ALL_ACCESS_TO_USERS])
                 <li id="settings-menu-item-parent" style="display: block" class="">
-                    <a href="/settings">
+                    <a href="#">
                         <img src="{{ asset('imgs/setting.png') }}" alt="Settings">
-                        Settings
+                        User Management
                     </a>
                     <ul class="uk-nav-sub">
-                        <li class="">
+                        {{-- <li class="">
                             <a href="">System Configuration</a>
-                        </li>
+                        </li> --}}
                         <li class="{{ Request::is('*user*') ? 'active' : '' }}">
                             <a href="/manage-users">Manage Users</a>
                         </li>
@@ -62,6 +70,7 @@
                         </li>
                     </ul>
                 </li>
+                @endcan
             </ul>
         </div>
     </div>

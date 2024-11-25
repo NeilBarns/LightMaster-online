@@ -18,6 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger('DeviceTimeTransactionsID');
             $table->unsignedBigInteger('DeviceID');
             $table->string('TransactionType', 11);
+            $table->boolean('IsOpenTime')->default(false)->nullable();
             $table->dateTime('Time');
             $table->enum('StoppageType', ['AUTO', 'MANUAL'])->nullable();
             $table->integer('Duration');

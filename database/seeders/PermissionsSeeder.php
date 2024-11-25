@@ -17,7 +17,6 @@ class PermissionsSeeder extends Seeder
     {
         DB::table('Permissions')->insert([
             //ADMIN/OVERALL
-            ['PermissionName' => 'view_dashboard', 'Description' => 'Access to view the dashboard'],
             ['PermissionName' => 'all_access_to_device', 'Description' => 'Full access permission to devices'],
             ['PermissionName' => 'all_access_to_reports', 'Description' => 'Full access permission to all reports'],
             ['PermissionName' => 'all_access_to_users', 'Description' => 'Full access permission to manage user'],
@@ -36,11 +35,15 @@ class PermissionsSeeder extends Seeder
             ['PermissionName' => 'can_delete_device_increments', 'Description' => 'Can delete device increments'],
             ['PermissionName' => 'can_view_device_specific_rate_usage_report', 'Description' => 'Can view specific device rate and usage report'],
             ['PermissionName' => 'can_view_device_specific_time_transaction_report', 'Description' => 'Can view specific device time transaction report'],
+            ['PermissionName' => 'can_deploy_device', 'Description' => 'Can deploy device'],
+            ['PermissionName' => 'can_edit_device_name', 'Description' => 'Can edit device name'],
+            ['PermissionName' => 'can_edit_watchdog_interval', 'Description' => 'Can edit watchdog interval'],
+            ['PermissionName' => 'can_edit_remaining_time_interval', 'Description' => 'Can edit remaining time interval'],
 
 
             //REPORTS
-            // ['PermissionName' => 'access_to_reports_tab', 'Description' => 'Full access permission for user management'],
-            // ['PermissionName' => 'view_all_reports', 'Description' => 'Permission to view all reports'],
+            ['PermissionName' => 'can_view_financial_reports', 'Description' => 'Can view financial reports'],
+            ['PermissionName' => 'can_view_activity_logs_reports', 'Description' => 'Can view activity logs reports'],
 
 
             //SETTINGS
