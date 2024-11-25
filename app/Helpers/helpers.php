@@ -41,13 +41,15 @@ if (!function_exists('convertSecondsToTimeFormat')) {
         $timeString = '';
 
         if ($hours > 0) {
-            $timeString .= "{$hours} hr(s) ";
+            $timeString .= $hours . ' hr' . ($hours > 1 ? 's' : '') . ' ';
         }
         if ($minutes > 0) {
-            $timeString .= "{$minutes} min(s) ";
+            $timeString .= $minutes . ' min' . ($minutes > 1 ? 's' : '') . ' ';
         }
-        $timeString .= "{$remainingSeconds} sec(s)";
+        if ($remainingSeconds > 0) {
+            $timeString .= $remainingSeconds . ' sec' . ($remainingSeconds > 1 ? 's' : '');
+        }
 
-        return $timeString;
+        return trim($timeString);
     }
 }

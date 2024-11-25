@@ -34,4 +34,11 @@ class Users extends Model implements AuthenticatableContract
     {
         return $this->belongsToMany(Roles::class, 'UserRoles', 'UserId', 'RoleId');
     }
+
+    public function hasPermission($permissionName): bool
+    {
+        return $this->roles()->whereHas('permissions', function ($query) use ($permissionName) {
+            $query->where('PermissionName', $permissionName);
+        })->exists();
+    }
 }

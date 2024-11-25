@@ -21,10 +21,10 @@ class AuthController extends Controller
 
         try {
             $user = Users::where('UserName', $credentials['username'])
-                ->with(['roles' => function ($query) {
-                    $query->select('roles.RoleId', 'roles.RoleName')
-                        ->with(['permissions' => function ($query) {
-                            $query->select('permissions.PermissionId', 'permissions.PermissionName');
+                ->with(['Roles' => function ($query) {
+                    $query->select('Roles.RoleId', 'Roles.RoleName')
+                        ->with(['Permissions' => function ($query) {
+                            $query->select('Permissions.PermissionId', 'Permissions.PermissionName');
                         }]);
                 }])
                 ->first();
@@ -42,7 +42,7 @@ class AuthController extends Controller
                         return $role->permissions;
                     });
 
-                    $intended = 'dashboard'; // Default redirect
+                    $intended = 'device'; // Default redirect
 
                     if ($permissions->contains('PermissionName', 'view_dashboard')) {
                         $intended = 'dashboard';

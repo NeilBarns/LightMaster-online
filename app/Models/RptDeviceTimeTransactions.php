@@ -18,6 +18,7 @@ class RptDeviceTimeTransactions extends Model
         'DeviceTimeTransactionsID',
         'DeviceID',
         'TransactionType',
+        'IsOpenTime',
         'Time',
         'StoppageType',
         'Duration',
